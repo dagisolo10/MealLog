@@ -55,7 +55,7 @@ export default function CustomerModal() {
         setLoading(true);
 
         const endDate = new Date(String(payload.startDate).trim());
-        endDate.setDate(new Date(String(payload.startDate).trim()).getDate() + 2);
+        endDate.setDate(new Date(String(payload.startDate).trim()).getDate() + 30);
 
         try {
             await db.customers.add({
