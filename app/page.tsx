@@ -10,7 +10,7 @@ export default function Home() {
     const customers = useLiveQuery(() => db.customers.toArray()) || [];
 
     return (
-        <main className="flex h-180 flex-col">
+        <main className="flex flex-col">
             <div className="mb-6 flex items-center justify-between">
                 <div>
                     <p className="text-muted-foreground text-sm font-medium tracking-wider uppercase">Today</p>

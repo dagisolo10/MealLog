@@ -1,38 +1,41 @@
 "use client";
 import { SyntheticEvent, useState } from "react";
 import { Plus, Loader2 } from "lucide-react";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { db } from "@/lib/db";
 import { Field, FieldGroup } from "./ui/field";
+import { EthiopianDatePicker } from "./day-picker";
 
 export default function CustomerModal() {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [startDate, setStartDate] = useState<Date | undefined>(undefined);
 
     async function handleSubmit(e: SyntheticEvent<HTMLFormElement>) {
         e.preventDefault();
 
         const formData = new FormData(e.currentTarget);
         const payload = Object.fromEntries(formData);
-        if (!String(payload.name).trim() || !String(payload.startDate).trim()) return;
+        if (!String(payload.name).trim() || !startDate) return;
         setLoading(true);
 
-        const endDate = new Date(String(payload.startDate).trim());
-        endDate.setDate(new Date(String(payload.startDate).trim()).getDate() + 30);
+        const endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + 30);
 
         try {
             await db.customers.add({
                 name: String(payload.name).trim(),
-                startDate: String(payload.startDate).trim(),
+                startDate: startDate.toISOString(),
                 isActive: true,
                 synced: false,
                 endDate: endDate.toDateString(),
             });
 
             setOpen(false);
+            setStartDate(undefined);
         } finally {
             setLoading(false);
         }
@@ -51,6 +54,7 @@ export default function CustomerModal() {
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <DialogHeader>
                         <DialogTitle>Add Customer</DialogTitle>
+                        <DialogDescription>Fill out the form below to add a new meal contract.</DialogDescription>
                     </DialogHeader>
 
                     <FieldGroup>
@@ -61,7 +65,7 @@ export default function CustomerModal() {
 
                         <Field>
                             <Label>Start Date</Label>
-                            <Input type="date" name="startDate" defaultValue={new Date().toISOString().split("T")[0]} />
+                            <EthiopianDatePicker date={startDate} setDate={setStartDate} />
                         </Field>
                     </FieldGroup>
 

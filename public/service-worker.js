@@ -1,4 +1,4 @@
-const CACHE_NAME = "meal-log-" + Date.now();
+const CACHE_NAME = "meal-log-v2";
 const APP_SHELL = ["/"];
 
 self.addEventListener("install", (event) => {

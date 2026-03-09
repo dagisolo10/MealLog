@@ -22,11 +22,25 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
     const today = new Date();
     const currentEth = toEC(today.getFullYear(), today.getMonth() + 1, today.getDate());
 
-    const [selectedMonth, setSelectedMonth] = useState(currentEth.month.toString());
     const activeYear = currentEth.year;
+    const [selectedMonth, setSelectedMonth] = useState(currentEth.month.toString());
 
     const allLogs = useLiveQuery(() => db.mealLogs.toArray());
     const filtered = useMemo(() => [...customers].filter((customer) => customer.name.toLowerCase().includes(query.toLowerCase())), [customers, query]);
+
+    const perPage = 60;
+    const startIndex = (currentPage - 1) * perPage;
+    const totalPages = Math.ceil(customers.length / perPage);
+    const paginatedCustomers = filtered.slice(startIndex, startIndex + perPage);
+
+    const daysInMonth = useMemo(() => {
+        const month = Number(selectedMonth);
+        if (month < 12) return 30;
+        if (month === 12) return 30;
+
+        const isLeap = (activeYear + 1) % 4 === 0;
+        return isLeap ? 6 : 5;
+    }, [selectedMonth, activeYear]);
 
     const isChecked = (customerId: number, dayIndex: number, slot: "slot1" | "slot2") => {
         if (!allLogs) return false;
@@ -183,6 +197,7 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
         a.click();
         window.URL.revokeObjectURL(url);
     };
+
     useEffect(() => {
         const isCurrentMonth = selectedMonth === currentEth.month.toString();
 
@@ -202,11 +217,6 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
         return () => clearTimeout(timer);
     }, [selectedMonth, currentEth.day, currentEth.month, currentPage]);
 
-    const perPage = 5;
-    const startIndex = (currentPage - 1) * perPage;
-    const totalPages = Math.ceil(customers.length / perPage);
-    const paginatedCustomers = filtered.slice(startIndex, startIndex + perPage);
-
     return (
         <div className="flex flex-1 flex-col gap-4">
             <div className="flex flex-col items-end justify-between gap-4 rounded-lg border p-4">
@@ -224,7 +234,7 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
                     <div className="w-full">
                         <Label className="text-muted-foreground mb-2 block">Ethiopian Month</Label>
                         <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                            <SelectTrigger className="text-primary w-full text-base font-bold">
+                            <SelectTrigger className="text-primary w-full py-5 text-lg font-bold">
                                 <CalendarDays className="mr-2 size-4 opacity-50" />
                                 <SelectValue placeholder="Select Month" />
                             </SelectTrigger>
@@ -251,8 +261,9 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
                     <Table>
                         <TableHeader>
                             <TableRow className="bg-muted/30">
-                                <TableHead className="bg-background sticky left-0 z-20 min-w-36 border-r">Name</TableHead>
-                                {Array.from({ length: 30 }).map((_, index) => {
+                                <TableHead className="bg-background text-muted-foreground sticky left-0 z-30 w-12 border-r text-center">#</TableHead>
+                                <TableHead className="min-w-48 border-r">Name</TableHead>
+                                {Array.from({ length: daysInMonth }).map((_, index) => {
                                     const dayNum = index + 1;
                                     const isToday = dayNum === currentEth.day && selectedMonth === currentEth.month.toString();
 
@@ -291,7 +302,8 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
                                     <TableCell colSpan={30 - currentEth.day} className="border-none" />
                                 </TableRow>
                             ) : (
-                                paginatedCustomers.map((customer) => {
+                                paginatedCustomers.map((customer, index) => {
+                                    const actualIndex = startIndex + index + 1;
                                     const customerStartDate = new Date(customer.startDate);
                                     const { year, month, day } = toEC(customerStartDate.getFullYear(), customerStartDate.getMonth() + 1, customerStartDate.getDate());
                                     const pageMonth = Number(selectedMonth);
@@ -301,18 +313,19 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
 
                                     return (
                                         <TableRow key={customer.id} className="hover:bg-muted/50 transition-colors">
-                                            <TableCell className="bg-background sticky left-0 z-10 border-r">
+                                            <TableCell className="bg-background sticky left-0 z-10 border-r text-center">{actualIndex}</TableCell>
+
+                                            <TableCell className="min-w-48 border-r">
                                                 <CustomerDetailsModal customer={customer}>
                                                     <div className="grid cursor-pointer text-left">
-                                                        <span className="max-w-30 truncate text-lg font-medium">{customer.name}</span>
+                                                        <span className="min-w-full truncate text-lg font-medium">{customer.name}</span>
                                                         <span className="text-muted-foreground text-sm">
                                                             {monthNames.amharic[month - 1]} {day}, {year}
                                                         </span>
                                                     </div>
                                                 </CustomerDetailsModal>
                                             </TableCell>
-
-                                            {Array.from({ length: 30 }).map((_, index) => {
+                                            {Array.from({ length: daysInMonth }).map((_, index) => {
                                                 const dayNumber = index + 1;
 
                                                 const shouldShowDash = isPageBeforeJoin || (isStartMonth && dayNumber < day);

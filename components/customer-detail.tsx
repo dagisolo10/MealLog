@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Customer, db, MealSlot } from "@/lib/db";
 import { getFullDate } from "@/lib/helper-functions";
 import DeleteAlertDialog from "./delete-alert-dialog";
@@ -26,9 +26,18 @@ export default function CustomerDetailsModal({ customer, children }: { customer:
     );
 
     const totalEaten = allCustomerLogs?.length || 0;
-    const totalDaysInContract = differenceInDays(new Date(customer.endDate), new Date(customer.startDate)) + 1;
+    const totalDaysInContract = differenceInDays(new Date(customer.endDate), new Date(customer.startDate));
     const totalPlannedMeals = totalDaysInContract * 2;
     const mealsLeft = Math.max(0, totalPlannedMeals - totalEaten);
+
+    const isOverEaten = totalEaten > totalPlannedMeals;
+
+    const todayDate = startOfDay(new Date());
+    const expirationDate = startOfDay(new Date(customer.endDate));
+
+    const daysLeft = differenceInDays(expirationDate, todayDate);
+    const isExpired = daysLeft <= 0;
+    const isWarning = daysLeft > 0 && daysLeft <= 3;
 
     const hasEaten = (slot: MealSlot) => todaysLogs?.some((log) => log.slot === slot) ?? false;
 
@@ -50,12 +59,6 @@ export default function CustomerDetailsModal({ customer, children }: { customer:
         await db.customers.delete(customer.id);
     };
 
-    const todayDate = startOfDay(new Date());
-    const expirationDate = startOfDay(new Date(customer.endDate));
-    const daysLeft = differenceInDays(expirationDate, todayDate);
-    const isExpired = daysLeft < 0;
-    const isWarning = daysLeft >= 0 && daysLeft <= 3;
-
     return (
         <Dialog>
             <DialogTrigger asChild>{children}</DialogTrigger>
@@ -63,11 +66,15 @@ export default function CustomerDetailsModal({ customer, children }: { customer:
             <DialogContent className="top-[40%]">
                 <DialogHeader>
                     <DialogTitle className="text-2xl">{customer.name}</DialogTitle>
+                    <DialogDescription id="customer-description">Details and meal logging for {customer.name}</DialogDescription>
+
                     <div className="mt-2 flex items-center gap-2 text-sm">
                         {isExpired ? (
                             <span className="text-destructive font-bold tracking-tighter uppercase">Expired</span>
                         ) : isWarning ? (
-                            <span className="animate-pulse font-bold text-amber-600">Expiring Soon: {daysLeft === 0 ? "Ends Today" : `${daysLeft} ${daysLeft === 1 ? "day" : "days"} left`}</span>
+                            <span className="animate-pulse font-bold text-amber-600">
+                                Expiring Soon: {daysLeft} {daysLeft === 1 ? "day" : "days"} left
+                            </span>
                         ) : (
                             <span className="text-muted-foreground">{daysLeft} days remaining</span>
                         )}
@@ -85,6 +92,13 @@ export default function CustomerDetailsModal({ customer, children }: { customer:
                             <p className={`text-2xl font-black ${mealsLeft <= 4 ? "text-amber-600" : ""}`}>{mealsLeft}</p>
                         </div>
                     </div>
+
+                    {isOverEaten && (
+                        <div className="bg-destructive text-destructive-foreground flex animate-pulse items-center gap-2 rounded-lg p-3 text-xs font-bold">
+                            <AlertCircle className="size-4" />
+                            Warning: Customer has exceeded the meal limit for this contract!
+                        </div>
+                    )}
 
                     {isExpired && (
                         <div className="bg-destructive/10 text-destructive flex items-center gap-2 rounded-lg p-3 text-xs font-bold">
@@ -113,8 +127,8 @@ export default function CustomerDetailsModal({ customer, children }: { customer:
                     </div>
 
                     <div className="grid gap-3">
-                        <MealButton label="Meal Slot 1" disabled={isExpired || loading} isDone={hasEaten("slot1")} onClick={() => handleLogMeal("slot1")} />
-                        <MealButton label="Meal Slot 2" disabled={isExpired || loading} isDone={hasEaten("slot2")} onClick={() => handleLogMeal("slot2")} />
+                        <MealButton label="Meal Slot 1" disabled={isExpired || loading} isDone={hasEaten("slot1")} isWarning={isOverEaten && !hasEaten("slot1")} onClick={() => handleLogMeal("slot1")} />
+                        <MealButton label="Meal Slot 2" disabled={isExpired || loading} isDone={hasEaten("slot2")} isWarning={isOverEaten && !hasEaten("slot2")} onClick={() => handleLogMeal("slot2")} />
                     </div>
                 </div>
             </DialogContent>
@@ -122,19 +136,24 @@ export default function CustomerDetailsModal({ customer, children }: { customer:
     );
 }
 
-function MealButton({ label, isDone, onClick, disabled }: { label: string; isDone: boolean; onClick: () => void; disabled: boolean }) {
+function MealButton({ label, isDone, onClick, disabled, isWarning }: { label: string; isDone: boolean; onClick: () => void; disabled: boolean; isWarning?: boolean }) {
     return (
-        <Button variant={isDone ? "default" : "outline"} className={`h-20 w-full justify-between px-4 transition-all ${isDone ? "bg-green-500 hover:bg-green-700" : "hover:border-primary"}`} onClick={onClick} disabled={isDone || disabled}>
+        <Button
+            variant={isDone ? "default" : "outline"}
+            onClick={onClick}
+            disabled={isDone || disabled}
+            className={`h-20 w-full justify-between px-4 transition-all ${isDone ? "bg-green-500 hover:bg-green-700" : isWarning ? "border-destructive/40! text-destructive/70 hover:bg-destructive/5" : "hover:border-primary"}`}
+        >
             <div className="flex items-center gap-3">
-                <div className={`rounded-full p-2 ${isDone ? "bg-white/20" : "bg-secondary"}`}>
+                <div className={`rounded-full p-2 ${isDone ? "bg-white/20" : isWarning ? "bg-destructive/10" : "bg-secondary"}`}>
                     <Utensils className="size-5" />
                 </div>
                 <div className="text-left">
                     <p className="font-bold">{label}</p>
-                    <p className="text-[10px] opacity-70">{isDone ? "Confirmed" : disabled ? "Locked" : "Tap to check in"}</p>
+                    <p className="text-[10px] opacity-70">{isDone ? "Confirmed" : isWarning ? "Limit Exceeded!" : disabled ? "Locked" : "Tap to check in"}</p>
                 </div>
             </div>
-            {isDone && <Check className="size-6 stroke-[3px]" />}
+            {isDone && <Check className="text-foreground size-6 stroke-[3px]" />}
         </Button>
     );
 }

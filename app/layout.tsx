@@ -33,7 +33,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <html lang="en" className="dark">
             <body className={`${manrope.variable} ${poppins.variable} ${playfair.variable} antialiased`}>
                 <ServiceRegister />
-                <main className="mx-auto max-w-11/12 py-12">{children}</main>
+                <main className="mx-auto max-w-11/12 py-12 pb-24">{children}</main>
                 <UpdateNotification />
                 <Toaster position="top-center" />
             </body>
