@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Table, TableBody, TableHeader, TableHead, TableRow, TableCell } from "@/components/ui/table";
 import { Checkbox } from "./ui/checkbox";
 import { Input } from "./ui/input";
@@ -15,6 +15,7 @@ import PaginatedTable from "./paginated-table";
 export default function CustomerTable({ customers }: { customers: Customer[] }) {
     const [query, setQuery] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
+    const tableContainerRef = useRef<HTMLDivElement>(null);
 
     const today = new Date();
     const currentEth = toEC(today.getFullYear(), today.getMonth() + 1, today.getDate());
@@ -48,6 +49,25 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
         if (existing) await db.mealLogs.delete(existing.id);
         else await db.mealLogs.add({ customerId: customer.id, logDate: logDate, slot: slot, timestamp: new Date(), synced: false });
     };
+
+    useEffect(() => {
+        const isCurrentMonth = selectedMonth === currentEth.month.toString();
+
+        const targetId = isCurrentMonth ? `day-col-${currentEth.day}` : `day-col-1`;
+
+        const timer = setTimeout(() => {
+            const targetElement = document.getElementById(targetId);
+            if (targetElement) {
+                targetElement.scrollIntoView({
+                    behavior: "smooth",
+                    block: "nearest",
+                    inline: "center",
+                });
+            }
+        }, 150);
+
+        return () => clearTimeout(timer);
+    }, [selectedMonth, currentEth.day, currentEth.month, currentPage]);
 
     const perPage = 5;
     const startIndex = (currentPage - 1) * perPage;
@@ -87,16 +107,22 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
             </div>
 
             <div className="bg-background overflow-hidden rounded-md border">
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto" ref={tableContainerRef}>
                     <Table>
                         <TableHeader>
                             <TableRow className="bg-muted/30">
                                 <TableHead className="bg-background sticky left-0 z-20 min-w-36 border-r">Name</TableHead>
-                                {Array.from({ length: 30 }).map((_, index) => (
-                                    <TableHead className="min-w-15 border-r pr-2 text-center" key={index}>
-                                        {(index + 1).toString().padStart(2, "0")}
-                                    </TableHead>
-                                ))}
+                                {Array.from({ length: 30 }).map((_, index) => {
+                                    const dayNum = index + 1;
+                                    const isToday = dayNum === currentEth.day && selectedMonth === currentEth.month.toString();
+
+                                    return (
+                                        <TableHead id={`day-col-${dayNum}`} className={`min-w-15 border-r pr-2 text-center transition-colors ${isToday ? "text-foreground bg-blue-500/10 font-black" : "text-muted-foreground"}`} key={index}>
+                                            {dayNum.toString().padStart(2, "0")}
+                                            {isToday && <div className="text-[8px] text-blue-500">Today</div>}
+                                        </TableHead>
+                                    );
+                                })}
                             </TableRow>
                         </TableHeader>
 
@@ -104,12 +130,9 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
                             {paginatedCustomers.map((customer) => {
                                 const customerStartDate = new Date(customer.startDate);
                                 const { year, month, day } = toEC(customerStartDate.getFullYear(), customerStartDate.getMonth() + 1, customerStartDate.getDate());
-
                                 const pageMonth = Number(selectedMonth);
                                 const pageYear = activeYear;
-
                                 const isPageBeforeJoin = pageYear < year || (pageYear === year && pageMonth < month);
-
                                 const isStartMonth = pageYear === year && pageMonth === month;
 
                                 return (

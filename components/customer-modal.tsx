@@ -1,38 +1,4 @@
-// "use client";
-// import { useState } from "react";
-// import { Plus, Loader2 } from "lucide-react";
-// import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTrigger } from "./ui/dialog";
-// import { Button } from "./ui/button";
-
-// export default function CustomerModal() {
-//     const [loading] = useState(false);
-
-//     return (
-//         <Dialog>
-//             <DialogTrigger asChild>
-//                 <Button className="font-semibold shadow-sm">
-//                     <Plus className="size-4" /> Add Customer
-//                 </Button>
-//             </DialogTrigger>
-
-//             <DialogContent className="sm:max-w-125">
-//                 <form>
-//                     <DialogHeader className="relative border-b border-zinc-100 pb-5 dark:border-zinc-800"></DialogHeader>
-
-//                     <DialogFooter className="gap-4">
-//                         <Button disabled={loading}>
-//                             {loading && <Loader2 className="size-4 animate-spin" />}
-//                             Create Vendor
-//                         </Button>
-//                     </DialogFooter>
-//                 </form>
-//             </DialogContent>
-//         </Dialog>
-//     );
-// }
-
 "use client";
-
 import { SyntheticEvent, useState } from "react";
 import { Plus, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";

@@ -3,6 +3,7 @@ import { Manrope, Playfair_Display, Poppins } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import ServiceRegister from "@/components/service-register";
 import "./globals.css";
+import UpdateNotification from "@/components/update-notification";
 
 const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope" });
 const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-playfair" });
@@ -14,7 +15,7 @@ export const metadata: Metadata = {
         template: "%s | MealLog",
     },
     icons: {
-        icon: "/favicon.ico"
+        icon: "/favicon.ico",
     },
     description: "Track student and professional meal contracts. Manage lunch and dinner check-ins with automated expiry tracking.",
     appleWebApp: {
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             <body className={`${manrope.variable} ${poppins.variable} ${playfair.variable} antialiased`}>
                 <ServiceRegister />
                 <main className="mx-auto max-w-11/12 py-12">{children}</main>
+                <UpdateNotification />
                 <Toaster position="top-center" />
             </body>
         </html>

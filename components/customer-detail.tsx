@@ -11,8 +11,9 @@ import { Check, Utensils, AlertCircle } from "lucide-react";
 
 export default function CustomerDetailsModal({ customer, children }: { customer: Customer; children: React.ReactNode }) {
     const [loading, setLoading] = useState(false);
-
     const todayStr = format(new Date(), "yyyy-MM-dd");
+
+    const allCustomerLogs = useLiveQuery(() => db.mealLogs.where("customerId").equals(customer.id).toArray(), [customer.id]);
 
     const todaysLogs = useLiveQuery(
         () =>
@@ -23,6 +24,11 @@ export default function CustomerDetailsModal({ customer, children }: { customer:
                 .toArray(),
         [customer.id, todayStr],
     );
+
+    const totalEaten = allCustomerLogs?.length || 0;
+    const totalDaysInContract = differenceInDays(new Date(customer.endDate), new Date(customer.startDate)) + 1;
+    const totalPlannedMeals = totalDaysInContract * 2;
+    const mealsLeft = Math.max(0, totalPlannedMeals - totalEaten);
 
     const hasEaten = (slot: MealSlot) => todaysLogs?.some((log) => log.slot === slot) ?? false;
 
@@ -69,6 +75,17 @@ export default function CustomerDetailsModal({ customer, children }: { customer:
                 </DialogHeader>
 
                 <div className="space-y-6">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="rounded-xl border p-3 text-center">
+                            <p className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">Meals Eaten</p>
+                            <p className="text-2xl font-black">{totalEaten}</p>
+                        </div>
+                        <div className="rounded-xl border p-3 text-center">
+                            <p className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">Meals Left</p>
+                            <p className={`text-2xl font-black ${mealsLeft <= 4 ? "text-amber-600" : ""}`}>{mealsLeft}</p>
+                        </div>
+                    </div>
+
                     {isExpired && (
                         <div className="bg-destructive/10 text-destructive flex items-center gap-2 rounded-lg p-3 text-xs font-bold">
                             <AlertCircle className="size-4" />
@@ -107,7 +124,7 @@ export default function CustomerDetailsModal({ customer, children }: { customer:
 
 function MealButton({ label, isDone, onClick, disabled }: { label: string; isDone: boolean; onClick: () => void; disabled: boolean }) {
     return (
-        <Button variant={isDone ? "default" : "outline"} className={`h-20 w-full justify-between px-4 transition-all ${isDone ? "bg-green-600 hover:bg-green-700" : "hover:border-primary"}`} onClick={onClick} disabled={isDone || disabled}>
+        <Button variant={isDone ? "default" : "outline"} className={`h-20 w-full justify-between px-4 transition-all ${isDone ? "bg-green-500 hover:bg-green-700" : "hover:border-primary"}`} onClick={onClick} disabled={isDone || disabled}>
             <div className="flex items-center gap-3">
                 <div className={`rounded-full p-2 ${isDone ? "bg-white/20" : "bg-secondary"}`}>
                     <Utensils className="size-5" />
