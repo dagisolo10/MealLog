@@ -22,6 +22,8 @@
     "dexie-react-hooks": "^4.2.0",
     "dotenv": "^17.2.4",
     "embla-carousel-react": "^8.6.0",
+    "exceljs": "^4.4.0",
+    "file-saver": "^2.0.5",
     "kenat": "^3.2.0",
     "lucide-react": "^0.563.0",
     "next": "16.1.6",
@@ -33,7 +35,8 @@
     "react-icons": "^5.5.0",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
-    "tailwind-scrollbar": "^4.0.2"
+    "tailwind-scrollbar": "^4.0.2",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

@@ -1,9 +1,10 @@
 "use client";
+import ExcelJS from "exceljs";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Table, TableBody, TableHeader, TableHead, TableRow, TableCell } from "@/components/ui/table";
 import { Checkbox } from "./ui/checkbox";
 import { Input } from "./ui/input";
-import { Search, Minus, CalendarDays } from "lucide-react";
+import { Search, Minus, CalendarDays, Download } from "lucide-react";
 import { Customer, db } from "@/lib/db";
 import CustomerDetailsModal from "./customer-detail";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -51,8 +52,137 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
         else await db.mealLogs.add({ customerId: customer.id, logDate: logDate, slot: slot, timestamp: new Date(), synced: false });
     };
 
-    const handleReset = () => setQuery("");
+    const exportFullHistory = async () => {
+        if (customers.length === 0) return;
 
+        const workbook = new ExcelJS.Workbook();
+
+        const allStartDates = customers.map((c) => new Date(c.startDate));
+        const allEndDates = customers.map((c) => {
+            const d = new Date(c.startDate);
+            d.setDate(d.getDate() + 30);
+            return d;
+        });
+
+        const minDate = new Date(Math.min(...allStartDates.map((d) => d.getTime())));
+        const maxDate = new Date(Math.max(...allEndDates.map((d) => d.getTime())));
+
+        const minEth = toEC(minDate.getFullYear(), minDate.getMonth() + 1, minDate.getDate());
+        const maxEth = toEC(maxDate.getFullYear(), maxDate.getMonth() + 1, maxDate.getDate());
+
+        const logPeriods: string[] = [];
+        let currYear = minEth.year;
+        let currMonth = minEth.month;
+
+        while (currYear < maxEth.year || (currYear === maxEth.year && currMonth <= maxEth.month)) {
+            logPeriods.push(`${currYear}-${currMonth}`);
+            currMonth++;
+            if (currMonth > 13) {
+                currMonth = 1;
+                currYear++;
+            }
+        }
+
+        for (const period of logPeriods) {
+            const [year, monthNum] = period.split("-").map(Number);
+            const monthName = monthNames.english[monthNum - 1];
+
+            const worksheet = workbook.addWorksheet(`${monthName} ${year}`);
+
+            worksheet.columns = [
+                { header: "Customer Name", key: "name", width: 25 },
+                ...Array.from({ length: 30 }, (_, i) => ({
+                    header: (i + 1).toString(),
+                    key: `day${i + 1}`,
+                    width: 6,
+                })),
+                { header: "S1 Total", key: "s1Total", width: 10 },
+                { header: "S2 Total", key: "s2Total", width: 10 },
+                { header: "Grand Total", key: "grandTotal", width: 12 },
+            ];
+
+            const headerRow = worksheet.getRow(1);
+            headerRow.font = { bold: true };
+            headerRow.alignment = { horizontal: "center", vertical: "middle" };
+            headerRow.fill = {
+                type: "pattern",
+                pattern: "solid",
+                fgColor: { argb: "FFE5E7EB" },
+            };
+
+            let visibleRowIndex = 0;
+
+            customers.forEach((customer) => {
+                const cStart = toEC(new Date(customer.startDate).getFullYear(), new Date(customer.startDate).getMonth() + 1, new Date(customer.startDate).getDate());
+
+                const endDateObj = new Date(customer.startDate);
+                endDateObj.setDate(endDateObj.getDate() + 30);
+                const cEnd = toEC(endDateObj.getFullYear(), endDateObj.getMonth() + 1, endDateObj.getDate());
+
+                const isBeforeMonth = year < cStart.year || (year === cStart.year && monthNum < cStart.month);
+                const isAfterMonth = year > cEnd.year || (year === cEnd.year && monthNum > cEnd.month);
+
+                if (isBeforeMonth || isAfterMonth) return;
+
+                let s1Count = 0;
+                let s2Count = 0;
+                const rowData: Record<string, string> = { name: customer.name };
+
+                for (let d = 1; d <= 30; d++) {
+                    const gc = toGC(year, monthNum, d);
+                    const logDate = `${gc.year}-${gc.month.toString().padStart(2, "0")}-${gc.day.toString().padStart(2, "0")}`;
+
+                    const s1 = allLogs?.some((l) => l.customerId === customer.id && l.logDate === logDate && l.slot === "slot1");
+                    const s2 = allLogs?.some((l) => l.customerId === customer.id && l.logDate === logDate && l.slot === "slot2");
+
+                    if (s1) s1Count++;
+                    if (s2) s2Count++;
+
+                    rowData[`day${d}`] = `${s1 ? "✓" : "-"} | ${s2 ? "✓" : "-"}`;
+                }
+
+                rowData.s1Total = s1Count.toString();
+                rowData.s2Total = s2Count.toString();
+                rowData.grandTotal = (s1Count + s2Count).toString();
+
+                const row = worksheet.addRow(rowData);
+                visibleRowIndex++;
+
+                if (visibleRowIndex % 2 === 0) {
+                    row.fill = {
+                        type: "pattern",
+                        pattern: "solid",
+                        fgColor: { argb: "FFF9FAFB" },
+                    };
+                }
+
+                row.eachCell({ includeEmpty: true }, (cell) => {
+                    cell.border = {
+                        top: { style: "thin", color: { argb: "FFD1D5DB" } },
+                        left: { style: "thin", color: { argb: "FFD1D5DB" } },
+                        bottom: { style: "thin", color: { argb: "FFD1D5DB" } },
+                        right: { style: "thin", color: { argb: "FFD1D5DB" } },
+                    };
+                    cell.alignment = { horizontal: "center" };
+                });
+
+                row.getCell("name").alignment = { horizontal: "left" };
+                row.getCell("s1Total").font = { color: { argb: "FF2563EB" }, bold: true };
+                row.getCell("s2Total").font = { color: { argb: "FFEA580C" }, bold: true };
+                row.getCell("grandTotal").font = { bold: true };
+            });
+        }
+
+        // 5. Finalize and Download
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Meal_Tracker_Report_${new Date().toISOString().split("T")[0]}.xlsx`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+    };
     useEffect(() => {
         const isCurrentMonth = selectedMonth === currentEth.month.toString();
 
@@ -90,22 +220,29 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
                     </div>
                 </div>
 
-                <div className="w-full">
-                    <Label className="text-muted-foreground mb-2 block">Ethiopian Month</Label>
-                    <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                        <SelectTrigger className="text-primary w-full text-base font-bold">
-                            <CalendarDays className="mr-2 size-4 opacity-50" />
-                            <SelectValue placeholder="Select Month" />
-                        </SelectTrigger>
+                <div className="flex w-full items-end gap-2">
+                    <div className="w-full">
+                        <Label className="text-muted-foreground mb-2 block">Ethiopian Month</Label>
+                        <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                            <SelectTrigger className="text-primary w-full text-base font-bold">
+                                <CalendarDays className="mr-2 size-4 opacity-50" />
+                                <SelectValue placeholder="Select Month" />
+                            </SelectTrigger>
 
-                        <SelectContent className="w-full">
-                            {monthNames.amharic.map((name, i) => (
-                                <SelectItem key={i} value={(i + 1).toString()} className="text-lg font-medium">
-                                    {name}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                            <SelectContent className="w-full">
+                                {monthNames.amharic.map((name, i) => (
+                                    <SelectItem key={i} value={(i + 1).toString()} className="text-lg font-medium">
+                                        {name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <Button variant="secondary" onClick={exportFullHistory} className="flex items-center gap-2">
+                        <Download className="size-4" />
+                        Export
+                    </Button>
                 </div>
             </div>
 
@@ -145,7 +282,7 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
                                                 <p className="text-muted-foreground text-sm">No results for &quot;{query}&quot;</p>
                                             </div>
 
-                                            <Button variant="outline" size="sm" onClick={handleReset} className="mt-2">
+                                            <Button variant="outline" size="sm" onClick={() => setQuery("")} className="mt-2">
                                                 Clear Search
                                             </Button>
                                         </div>
