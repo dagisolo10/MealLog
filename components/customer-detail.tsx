@@ -1,54 +1,33 @@
 "use client";
 import { useState } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Customer, db, MealSlot } from "@/lib/db";
 import { getFullDate } from "@/lib/helper-functions";
 import DeleteAlertDialog from "./delete-alert-dialog";
 import { useLiveQuery } from "dexie-react-hooks";
-import { format, startOfDay, differenceInDays } from "date-fns";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Check, Utensils, AlertCircle } from "lucide-react";
+import { calculateMealStats } from "@/lib/meal-stats";
 
 export default function CustomerDetailsModal({ customer, children }: { customer: Customer; children: React.ReactNode }) {
     const [loading, setLoading] = useState(false);
     const todayStr = format(new Date(), "yyyy-MM-dd");
 
-    const allCustomerLogs = useLiveQuery(() => db.mealLogs.where("customerId").equals(customer.id).toArray(), [customer.id]);
+    const allCustomerLogs = useLiveQuery(() => db.mealLogs.where("customerId").equals(customer.id).toArray(), [customer.id]) || [];
 
-    const todaysLogs = useLiveQuery(
-        () =>
-            db.mealLogs
-                .where("customerId")
-                .equals(customer.id)
-                .and((log) => log.logDate === todayStr)
-                .toArray(),
-        [customer.id, todayStr],
-    );
-
-    const totalEaten = allCustomerLogs?.length || 0;
-    const totalDaysInContract = differenceInDays(new Date(customer.endDate), new Date(customer.startDate));
-    const totalPlannedMeals = totalDaysInContract * 2;
-    const mealsLeft = Math.max(0, totalPlannedMeals - totalEaten);
-
-    const isOverEaten = totalEaten > totalPlannedMeals;
-
-    const todayDate = startOfDay(new Date());
-    const expirationDate = startOfDay(new Date(customer.endDate));
-
-    const daysLeft = differenceInDays(expirationDate, todayDate);
-    const isExpired = daysLeft <= 0;
-    const isWarning = daysLeft > 0 && daysLeft <= 3;
-
-    const hasEaten = (slot: MealSlot) => todaysLogs?.some((log) => log.slot === slot) ?? false;
+    const stats = calculateMealStats(customer, allCustomerLogs);
+    const { isExpired, isWarning, daysLeft, totalSkips, totalEaten, mealsLeft, isOverEaten, startSlotLabel, finishSlotLabel, dynamicEndDate, extraFullDays, hasEatenSlot1, hasEatenSlot2 } = stats;
 
     const handleLogMeal = async (slot: MealSlot) => {
-        if (hasEaten(slot)) return;
+        const hasEaten = slot === "slot1" ? hasEatenSlot1 : hasEatenSlot2;
+        if (hasEaten) return;
 
         setLoading(true);
         try {
-            await db.mealLogs.add({ customerId: customer.id, slot: slot, logDate: todayStr, timestamp: new Date(), synced: false });
+            await db.mealLogs.add({ customerId: customer.id, slot, logDate: todayStr, timestamp: new Date(), synced: false });
         } catch (err) {
-            console.error("Meal already logged or DB error:", err);
+            console.error(err);
         } finally {
             setLoading(false);
         }
@@ -62,12 +41,9 @@ export default function CustomerDetailsModal({ customer, children }: { customer:
     return (
         <Dialog>
             <DialogTrigger asChild>{children}</DialogTrigger>
-
-            <DialogContent className="top-[40%]">
+            <DialogContent className="top-[50%]">
                 <DialogHeader>
                     <DialogTitle className="text-2xl">{customer.name}</DialogTitle>
-                    <DialogDescription id="customer-description">Details and meal logging for {customer.name}</DialogDescription>
-
                     <div className="mt-2 flex items-center gap-2 text-sm">
                         {isExpired ? (
                             <span className="text-destructive font-bold tracking-tighter uppercase">Expired</span>
@@ -76,7 +52,14 @@ export default function CustomerDetailsModal({ customer, children }: { customer:
                                 Expiring Soon: {daysLeft} {daysLeft === 1 ? "day" : "days"} left
                             </span>
                         ) : (
-                            <span className="text-muted-foreground">{daysLeft} days remaining</span>
+                            <div className="flex w-full items-center justify-between">
+                                <span className="text-muted-foreground">{daysLeft} days remaining</span>
+                                {totalSkips > 0 && (
+                                    <span className="text-muted-foreground">
+                                        +{totalSkips} extra {totalSkips > 1 ? "meals" : "meal"}
+                                    </span>
+                                )}
+                            </div>
                         )}
                     </div>
                 </DialogHeader>
@@ -108,14 +91,29 @@ export default function CustomerDetailsModal({ customer, children }: { customer:
                     )}
 
                     <div className="space-y-4 border-t pt-4 text-sm">
-                        <div className="flex justify-between">
-                            <span className="text-muted-foreground">Contract Start</span>
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <span className="text-muted-foreground">
+                                    Contract Start <span className="text-secondary-foreground text-xs">({startSlotLabel})</span>
+                                </span>
+                            </div>
                             <span className="font-medium">{getFullDate(customer.startDate)}</span>
                         </div>
-                        <div className="flex justify-between">
-                            <span className="text-muted-foreground">Contract End</span>
-                            <span className="font-medium">{getFullDate(customer.endDate)}</span>
+
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <span className="text-muted-foreground">
+                                    Adjusted End <span className="text-secondary-foreground text-xs">({finishSlotLabel})</span>
+                                </span>
+                            </div>
+                            <span className="font-medium text-blue-600">{getFullDate(dynamicEndDate.toISOString())}</span>
                         </div>
+
+                        {extraFullDays > 0 && (
+                            <div className="border-t pt-4 text-right">
+                                +{extraFullDays} bonus {extraFullDays > 1 ? "days" : "day"}
+                            </div>
+                        )}
                     </div>
 
                     <div className="flex items-center justify-between border-t pt-4">
@@ -127,8 +125,8 @@ export default function CustomerDetailsModal({ customer, children }: { customer:
                     </div>
 
                     <div className="grid gap-3">
-                        <MealButton label="Meal Slot 1" disabled={isExpired || loading} isDone={hasEaten("slot1")} isWarning={isOverEaten && !hasEaten("slot1")} onClick={() => handleLogMeal("slot1")} />
-                        <MealButton label="Meal Slot 2" disabled={isExpired || loading} isDone={hasEaten("slot2")} isWarning={isOverEaten && !hasEaten("slot2")} onClick={() => handleLogMeal("slot2")} />
+                        <MealButton label="Meal Slot 1" disabled={isExpired || loading} isDone={hasEatenSlot1} isWarning={isOverEaten && !hasEatenSlot1} onClick={() => handleLogMeal("slot1")} />
+                        <MealButton label="Meal Slot 2" disabled={isExpired || loading} isDone={hasEatenSlot2} isWarning={isOverEaten && !hasEatenSlot2} onClick={() => handleLogMeal("slot2")} />
                     </div>
                 </div>
             </DialogContent>

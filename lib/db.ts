@@ -6,6 +6,7 @@ export interface Customer {
     id: number;
     name: string;
     startDate: string;
+    startSlot: MealSlot;
     endDate: string;
     isActive: boolean;
     synced: boolean;
