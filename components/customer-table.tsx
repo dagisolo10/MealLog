@@ -11,6 +11,7 @@ import { Label } from "./ui/label";
 import { monthNames, toEC, toGC } from "kenat";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import PaginatedTable from "./paginated-table";
+import { Button } from "./ui/button";
 
 export default function CustomerTable({ customers }: { customers: Customer[] }) {
     const [query, setQuery] = useState("");
@@ -49,6 +50,8 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
         if (existing) await db.mealLogs.delete(existing.id);
         else await db.mealLogs.add({ customerId: customer.id, logDate: logDate, slot: slot, timestamp: new Date(), synced: false });
     };
+
+    const handleReset = () => setQuery("");
 
     useEffect(() => {
         const isCurrentMonth = selectedMonth === currentEth.month.toString();
@@ -107,7 +110,7 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
             </div>
 
             <div className="bg-background overflow-hidden rounded-md border">
-                <div className="overflow-x-auto" ref={tableContainerRef}>
+                <div className={paginatedCustomers.length === 0 ? "overflow-hidden" : "overflow-x-auto"} ref={tableContainerRef}>
                     <Table>
                         <TableHeader>
                             <TableRow className="bg-muted/30">
@@ -127,58 +130,83 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
                         </TableHeader>
 
                         <TableBody>
-                            {paginatedCustomers.map((customer) => {
-                                const customerStartDate = new Date(customer.startDate);
-                                const { year, month, day } = toEC(customerStartDate.getFullYear(), customerStartDate.getMonth() + 1, customerStartDate.getDate());
-                                const pageMonth = Number(selectedMonth);
-                                const pageYear = activeYear;
-                                const isPageBeforeJoin = pageYear < year || (pageYear === year && pageMonth < month);
-                                const isStartMonth = pageYear === year && pageMonth === month;
+                            {paginatedCustomers.length === 0 ? (
+                                <TableRow className="border-none hover:bg-transparent">
+                                    <TableCell colSpan={currentEth.day - 2} className="h-72 border-none" />
 
-                                return (
-                                    <TableRow key={customer.id} className="hover:bg-muted/50 transition-colors">
-                                        <TableCell className="bg-background sticky left-0 z-10 border-r">
-                                            <CustomerDetailsModal customer={customer}>
-                                                <div className="grid cursor-pointer text-left">
-                                                    <span className="max-w-30 truncate text-lg font-medium">{customer.name}</span>
-                                                    <span className="text-muted-foreground text-sm">
-                                                        {monthNames.amharic[month - 1]} {day}, {year}
-                                                    </span>
-                                                </div>
-                                            </CustomerDetailsModal>
-                                        </TableCell>
+                                    <TableCell className="relative border-none p-0">
+                                        <div className="absolute top-1/2 left-1/2 w-64 -translate-x-1/2 -translate-y-1/2 space-y-3 text-center">
+                                            <div className="bg-muted mx-auto w-fit rounded-full p-4">
+                                                <Search className="text-muted-foreground size-8 opacity-20" />
+                                            </div>
 
-                                        {Array.from({ length: 30 }).map((_, index) => {
-                                            const dayNumber = index + 1;
+                                            <div className="space-y-1">
+                                                <p className="text-lg font-semibold tracking-tight whitespace-nowrap">No customers found</p>
+                                                <p className="text-muted-foreground text-sm">No results for &quot;{query}&quot;</p>
+                                            </div>
 
-                                            const shouldShowDash = isPageBeforeJoin || (isStartMonth && dayNumber < day);
+                                            <Button variant="outline" size="sm" onClick={handleReset} className="mt-2">
+                                                Clear Search
+                                            </Button>
+                                        </div>
+                                    </TableCell>
 
-                                            return (
-                                                <TableCell key={index} className="border-r p-0 text-center">
-                                                    {shouldShowDash ? (
-                                                        <div className="flex h-12 items-center justify-center opacity-10">
-                                                            <Minus className="size-3" />
-                                                        </div>
-                                                    ) : (
-                                                        <div className="flex h-12 items-center justify-center gap-1 px-1">
-                                                            <Checkbox
-                                                                checked={isChecked(customer.id, index, "slot1")}
-                                                                onCheckedChange={() => handleToggle(customer, index, "slot1")}
-                                                                className="size-4 border-blue-400/40 data-[state=checked]:border-blue-500 data-[state=checked]:bg-blue-500!"
-                                                            />
-                                                            <Checkbox
-                                                                checked={isChecked(customer.id, index, "slot2")}
-                                                                onCheckedChange={() => handleToggle(customer, index, "slot2")}
-                                                                className="size-4 border-orange-400/40 data-[state=checked]:border-orange-500 data-[state=checked]:bg-orange-500!"
-                                                            />
-                                                        </div>
-                                                    )}
-                                                </TableCell>
-                                            );
-                                        })}
-                                    </TableRow>
-                                );
-                            })}
+                                    <TableCell colSpan={30 - currentEth.day} className="border-none" />
+                                </TableRow>
+                            ) : (
+                                paginatedCustomers.map((customer) => {
+                                    const customerStartDate = new Date(customer.startDate);
+                                    const { year, month, day } = toEC(customerStartDate.getFullYear(), customerStartDate.getMonth() + 1, customerStartDate.getDate());
+                                    const pageMonth = Number(selectedMonth);
+                                    const pageYear = activeYear;
+                                    const isPageBeforeJoin = pageYear < year || (pageYear === year && pageMonth < month);
+                                    const isStartMonth = pageYear === year && pageMonth === month;
+
+                                    return (
+                                        <TableRow key={customer.id} className="hover:bg-muted/50 transition-colors">
+                                            <TableCell className="bg-background sticky left-0 z-10 border-r">
+                                                <CustomerDetailsModal customer={customer}>
+                                                    <div className="grid cursor-pointer text-left">
+                                                        <span className="max-w-30 truncate text-lg font-medium">{customer.name}</span>
+                                                        <span className="text-muted-foreground text-sm">
+                                                            {monthNames.amharic[month - 1]} {day}, {year}
+                                                        </span>
+                                                    </div>
+                                                </CustomerDetailsModal>
+                                            </TableCell>
+
+                                            {Array.from({ length: 30 }).map((_, index) => {
+                                                const dayNumber = index + 1;
+
+                                                const shouldShowDash = isPageBeforeJoin || (isStartMonth && dayNumber < day);
+
+                                                return (
+                                                    <TableCell key={index} className="border-r p-0 text-center">
+                                                        {shouldShowDash ? (
+                                                            <div className="flex h-12 items-center justify-center opacity-10">
+                                                                <Minus className="size-3" />
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex h-12 items-center justify-center gap-1 px-1">
+                                                                <Checkbox
+                                                                    checked={isChecked(customer.id, index, "slot1")}
+                                                                    onCheckedChange={() => handleToggle(customer, index, "slot1")}
+                                                                    className="size-4 border-blue-400/40 data-[state=checked]:border-blue-500 data-[state=checked]:bg-blue-500!"
+                                                                />
+                                                                <Checkbox
+                                                                    checked={isChecked(customer.id, index, "slot2")}
+                                                                    onCheckedChange={() => handleToggle(customer, index, "slot2")}
+                                                                    className="size-4 border-orange-400/40 data-[state=checked]:border-orange-500 data-[state=checked]:bg-orange-500!"
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </TableCell>
+                                                );
+                                            })}
+                                        </TableRow>
+                                    );
+                                })
+                            )}
                         </TableBody>
                     </Table>
                 </div>
