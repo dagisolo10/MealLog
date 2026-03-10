@@ -6,6 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toEC, monthNames } from "kenat";
 import "react-day-picker/style.css";
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 interface Props {
     date: Date | undefined;
@@ -28,7 +29,11 @@ export function EthiopianDatePicker({ date, setDate }: Props) {
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger onClick={() => setOpen(true)} asChild>
-                <Button type="button" variant={"outline"} className={`w-full justify-start text-left font-normal ${!date && "text-muted-foreground"}`}>
+                <Button
+                    type="button"
+                    variant={"outline"}
+                    className={cn("w-full justify-start text-left font-normal text-lg", !date && "text-muted-foreground")}
+                >
                     <CalendarIcon className="size-4" />
                     {getButtonLabel()}
                 </Button>
@@ -49,7 +54,6 @@ export function EthiopianDatePicker({ date, setDate }: Props) {
                         setDate(value);
                         setOpen(false);
                     }}
-                    showOutsideDays
                     className="p-3"
                 />
             </PopoverContent>

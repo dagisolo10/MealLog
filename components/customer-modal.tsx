@@ -3,17 +3,18 @@ import { SyntheticEvent, useState } from "react";
 import { Plus, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { db, MealSlot } from "@/lib/db";
 import { Field, FieldGroup } from "./ui/field";
 import { EthiopianDatePicker } from "./day-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { addDays } from "date-fns";
 
 export default function CustomerModal() {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+    const [startDate, setStartDate] = useState<Date | undefined>(new Date());
     const [startSlot, setStartSlot] = useState<string>("slot1");
 
     async function handleSubmit(e: SyntheticEvent<HTMLFormElement>) {
@@ -25,22 +26,27 @@ export default function CustomerModal() {
         if (!String(payload.name).trim() || !startDate) return;
         setLoading(true);
 
-        const endDate = new Date(startDate);
-        endDate.setDate(startDate.getDate() + 30);
+        const endDate = addDays(startDate, 30);
 
         try {
-            await db.customers.add({
+            const customerId = await db.customers.add({
                 name: String(payload.name).trim(),
+            });
+
+            await db.contracts.add({
+                customerId: customerId as number,
                 startDate: startDate.toISOString(),
+                endDate: endDate.toISOString(),
                 startSlot: startSlot as MealSlot,
-                isActive: true,
-                synced: false,
-                endDate: endDate.toDateString(),
+                paidAmount: Number(payload.paid) || 0,
+                status: "active",
             });
 
             setOpen(false);
-            setStartDate(undefined);
+            setStartDate(new Date());
             setStartSlot("slot1");
+        } catch (err) {
+            console.error("Failed to add customer and contract:", err);
         } finally {
             setLoading(false);
         }
@@ -49,50 +55,60 @@ export default function CustomerModal() {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button className="font-semibold shadow-sm">
+                <Button className="text-base font-semibold shadow-sm">
                     <Plus className="size-4" />
-                    Add Customer
+                    ደንበኛ መዝግብ
                 </Button>
             </DialogTrigger>
 
-            <DialogContent>
+            <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <DialogHeader>
                         <DialogTitle>Add Customer</DialogTitle>
-                        <DialogDescription>Fill out the form below to add a new meal contract.</DialogDescription>
+                        <DialogDescription>Create a new customer and start 60-meal contract.</DialogDescription>
                     </DialogHeader>
 
                     <FieldGroup>
                         <Field>
-                            <Label>Name</Label>
-                            <Input placeholder="Customer name" name="name" required />
+                            <Label className="text-lg">የደንበኘ ስም</Label>
+                            <Input name="name" required />
                         </Field>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <Field>
-                                <Label>Start Date</Label>
-                                <EthiopianDatePicker date={startDate} setDate={setStartDate} />
+                        <Field>
+                            <Label className="text-lg">መጀመሪያ ቀን</Label>
+                            <EthiopianDatePicker date={startDate} setDate={setStartDate} />
+                        </Field>
+
+                        <FieldGroup className="flex-row items-center gap-4">
+                            <Field className="flex-1">
+                                <Label className="text-lg">ቅድመ ክፍያ</Label>
+                                <Input placeholder="0.00" name="paid" type="number" required />
                             </Field>
 
-                            <Field>
-                                <Label>First Meal</Label>
+                            <Field className="flex-1">
+                                <Label className="text-lg">የመጀሪያ ምግብ</Label>
                                 <Select value={startSlot} onValueChange={setStartSlot}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select meal" />
+                                    <SelectTrigger className="text-lg">
+                                        <SelectValue />
                                     </SelectTrigger>
+
                                     <SelectContent>
-                                        <SelectItem value="slot1">Lunch</SelectItem>
-                                        <SelectItem value="slot2">Dinner</SelectItem>
+                                        <SelectItem className="text-lg" value="slot1">
+                                            ምሳ
+                                        </SelectItem>
+                                        <SelectItem className="text-lg" value="slot2">
+                                            እራት
+                                        </SelectItem>
                                     </SelectContent>
                                 </Select>
                             </Field>
-                        </div>
+                        </FieldGroup>
                     </FieldGroup>
 
                     <DialogFooter>
-                        <Button type="submit" disabled={loading} className="w-full sm:w-auto">
-                            {loading && <Loader2 className="mr-2 size-4 animate-spin" />}
-                            Create Customer
+                        <Button type="submit" disabled={loading} className="w-full text-xl">
+                            {loading && <Loader2 className="size-4 animate-spin" />}
+                            መዝግብ
                         </Button>
                     </DialogFooter>
                 </form>

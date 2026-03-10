@@ -11,7 +11,7 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { Trash2, AlertTriangle } from "lucide-react";
 
 interface DeleteProps {
     customerName: string;
@@ -24,26 +24,29 @@ export default function DeleteAlertDialog({ customerName, onDelete }: DeleteProp
             <AlertDialogTrigger asChild>
                 <Button
                     variant="ghost"
-                    size="sm"
-                    className="text-destructive hover:bg-destructive/10 hover:text-destructive w-fit justify-start gap-2"
+                    className="text-destructive hover:bg-destructive/10 border-destructive/40 h-9 w-fit justify-start gap-2 border text-lg"
                 >
                     <Trash2 className="size-4" />
-                    Delete Customer
+                    ደንበኛን ሰርዝ
                 </Button>
             </AlertDialogTrigger>
 
-            <AlertDialogContent>
+            <AlertDialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete <span className="text-foreground">{customerName}</span>?
+                    <AlertDialogTitle className="flex items-center gap-2 text-xl">
+                        <AlertTriangle className="text-destructive size-5" />
+                        እርግጠኛ ነዎት?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription className="pt-2 text-base">
+                        ይህ ድርጊት ሊመለስ አይችልም። ደንበኛን <span className="text-foreground font-bold">&quot;{customerName}&apos;</span> መረጃ እና ሙሉ ኮንትራት ታሪክ
+                        ይጠፋል
                     </AlertDialogDescription>
                 </AlertDialogHeader>
 
-                <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogFooter className="gap-2">
+                    <AlertDialogCancel>ይቅር</AlertDialogCancel>
                     <AlertDialogAction onClick={onDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                        Delete
+                        አጥፋ
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

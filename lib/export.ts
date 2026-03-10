@@ -1,25 +1,20 @@
 import ExcelJS from "exceljs";
-import { Customer, MealLog } from "@/lib/db"; // Adjust types as needed
+import { Customer, MealLog, db } from "@/lib/db";
 import { monthNames, toGC, toEC } from "kenat";
-import {  getFullDate } from "@/lib/helper-functions";
+import { getFullDate } from "@/lib/helper-functions";
 import { calculateMealStats } from "./meal-stats";
 
 export const exportFullHistory = async (customers: Customer[], allLogs: MealLog[]) => {
     if (customers.length === 0) return;
 
+    const allContracts = await db.contracts.toArray();
     const workbook = new ExcelJS.Workbook();
-    const logs = allLogs;
 
-    const allStartDates = customers.map((c) => new Date(c.startDate));
-    const allEndDates = customers.map((c) => {
-        const consumed = logs.filter((l) => l.customerId === c.id).length;
-        const d = new Date(c.startDate);
-        d.setDate(d.getDate() + (30 + (30 - Math.ceil(consumed / 2))));
-        return d;
-    });
+    const allDates = allLogs.map((l) => new Date(l.logDate));
+    if (allDates.length === 0) allDates.push(new Date());
 
-    const minDate = new Date(Math.min(...allStartDates.map((d) => d.getTime())));
-    const maxDate = new Date(Math.max(...allEndDates.map((d) => d.getTime())));
+    const minDate = new Date(Math.min(...allDates.map((d) => d.getTime())));
+    const maxDate = new Date(Math.max(...allDates.map((d) => d.getTime())));
 
     const minEth = toEC(minDate.getFullYear(), minDate.getMonth() + 1, minDate.getDate());
     const maxEth = toEC(maxDate.getFullYear(), maxDate.getMonth() + 1, maxDate.getDate());
@@ -41,88 +36,82 @@ export const exportFullHistory = async (customers: Customer[], allLogs: MealLog[
         const [year, monthNum] = period.split("-").map(Number);
         const monthName = monthNames.english[monthNum - 1];
 
-        let daysInThisMonth = 30;
-        if (monthNum === 13) {
-            const isLeap = (year + 1) % 4 === 0;
-            daysInThisMonth = isLeap ? 6 : 5;
-        }
+        const daysInThisMonth = monthNum === 13 ? ((year + 1) % 4 === 0 ? 6 : 5) : 30;
 
         const worksheet = workbook.addWorksheet(`${monthName} ${year}`);
 
         worksheet.columns = [
-            { header: "Customer Name", key: "name", width: 28 },
-            { header: "Start Date", key: "startDate", width: 18 },
-            { header: "Est. End Date", key: "endDate", width: 18 },
+            { header: "ስም (Name)", key: "name", width: 25 },
+            { header: "ማብቂያ (End Date)", key: "endDate", width: 18 },
             ...Array.from({ length: daysInThisMonth }, (_, i) => ({
                 header: (i + 1).toString(),
                 key: `day${i + 1}`,
-                width: 7,
+                width: 6,
             })),
-            { header: "Slot 1", key: "s1Total", width: 8 },
-            { header: "Slot 2", key: "s2Total", width: 8 },
-            { header: "Total", key: "grandTotal", width: 10 },
+            { header: "ቁርስ/ምሳ", key: "s1Total", width: 10 },
+            { header: "እራት", key: "s2Total", width: 10 },
+            { header: "ጠቅላላ", key: "grandTotal", width: 12 },
         ];
 
         const headerRow = worksheet.getRow(1);
-        headerRow.font = { bold: true, size: 11 };
-        headerRow.height = 25;
-        headerRow.alignment = { horizontal: "center", vertical: "middle" };
-        headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE5E7EB" } };
-
-        let visibleRowIndex = 0;
+        headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
+        headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1F2937" } };
+        headerRow.alignment = { horizontal: "center" };
 
         customers.forEach((customer) => {
-            const customerLogs = logs.filter((log) => log.customerId === customer.id);
-            const stats = calculateMealStats(customer, customerLogs);
-            const cStart = toEC(new Date(customer.startDate).getFullYear(), new Date(customer.startDate).getMonth() + 1, new Date(customer.startDate).getDate());
+            const customerLogs = allLogs.filter((log) => log.customerId === customer.id);
+            const activeContract = allContracts.find((c) => c.customerId === customer.id && c.status === "active");
+
+            const stats = calculateMealStats(activeContract, customerLogs);
 
             const rowData: Record<string, string> = {
                 name: customer.name,
-                startDate: getFullDate(customer.startDate),
-                endDate: getFullDate(stats.dynamicEndDate.toISOString()),
+                endDate: activeContract ? `${getFullDate(stats.dynamicEndDate.toISOString())}` : "No Active Contract",
             };
 
             let s1Count = 0;
             let s2Count = 0;
-            let hasLogsInMonth = false;
+            let hasActivity = false;
 
             for (let d = 1; d <= daysInThisMonth; d++) {
                 const gc = toGC(year, monthNum, d);
                 const logDate = `${gc.year}-${gc.month.toString().padStart(2, "0")}-${gc.day.toString().padStart(2, "0")}`;
 
-                const s1 = logs.some((l) => l.customerId === customer.id && l.logDate === logDate && l.slot === "slot1");
-                const s2 = logs.some((l) => l.customerId === customer.id && l.logDate === logDate && l.slot === "slot2");
+                const s1 = allLogs.find((l) => l.customerId === customer.id && l.logDate === logDate && l.slot === "slot1");
+                const s2 = allLogs.find((l) => l.customerId === customer.id && l.logDate === logDate && l.slot === "slot2");
 
-                if (s1 || s2) hasLogsInMonth = true;
-                if (s1) s1Count++;
-                if (s2) s2Count++;
+                if (s1 || s2) {
+                    hasActivity = true;
+                    if (s1) s1Count++;
+                    if (s2) s2Count++;
 
-                rowData[`day${d}`] = `${s1 ? "✓" : "-"}${s2 ? "✓" : "-"}`;
+                    rowData[`day${d}`] = s1 && s2 ? "✓ ✓" : s1 ? "✓ ✕" : "✕ ✓";
+                } else {
+                    rowData[`day${d}`] = "-";
+                }
             }
 
-            if (!hasLogsInMonth && (year < cStart.year || (year === cStart.year && monthNum < cStart.month))) return;
+            if (hasActivity || activeContract) {
+                rowData.s1Total = String(s1Count);
+                rowData.s2Total = String(s2Count);
+                rowData.grandTotal = String(s1Count + s2Count);
 
-            rowData.s1Total = s1Count.toString();
-            rowData.s2Total = s2Count.toString();
-            rowData.grandTotal = (s1Count + s2Count).toString();
+                const row = worksheet.addRow(rowData);
 
-            const row = worksheet.addRow(rowData);
-            row.height = 20;
-            visibleRowIndex++;
-
-            if (visibleRowIndex % 2 === 0) {
-                row.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF9FAFB" } };
+                row.eachCell((cell, colNumber) => {
+                    if (colNumber > 2 && colNumber <= daysInThisMonth + 2) {
+                        if (cell.value === "B/D") cell.font = { color: { argb: "FF059669" }, bold: true };
+                        if (cell.value === "-") cell.font = { color: { argb: "FFA1A1AA" } };
+                    }
+                    cell.alignment = { horizontal: "center" };
+                    cell.border = {
+                        top: { style: "thin" },
+                        left: { style: "thin" },
+                        bottom: { style: "thin" },
+                        right: { style: "thin" },
+                    };
+                });
             }
-
-            row.eachCell({ includeEmpty: true }, (cell) => {
-                cell.border = {
-                    top: { style: "thin", color: { argb: "FFD1D5DB" } },
-                    left: { style: "thin", color: { argb: "FFD1D5DB" } },
-                    bottom: { style: "thin", color: { argb: "FFD1D5DB" } },
-                    right: { style: "thin", color: { argb: "FFD1D5DB" } },
-                };
-                cell.alignment = { horizontal: "center", vertical: "middle" };
-            });
         });
     }
 
@@ -131,7 +120,6 @@ export const exportFullHistory = async (customers: Customer[], allLogs: MealLog[
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `Meal_Tracker_Report_${new Date().toISOString().split("T")[0]}.xlsx`;
+    a.download = `Meal_Tracker_Report_${new Date().toLocaleDateString()}.xlsx`;
     a.click();
-    window.URL.revokeObjectURL(url);
 };

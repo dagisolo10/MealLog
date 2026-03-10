@@ -3,30 +3,37 @@ import Dexie, { EntityTable } from "dexie";
 export type MealSlot = "slot1" | "slot2";
 
 export interface Customer {
-    id: number;
+    id?: number;
     name: string;
+}
+
+export interface Contract {
+    id?: number;
+    customerId: number;
     startDate: string;
-    startSlot: MealSlot;
     endDate: string;
-    isActive: boolean;
-    synced: boolean;
+    startSlot: MealSlot;
+    paidAmount: number;
+    status: "active" | "completed";
 }
 
 export interface MealLog {
-    id: number;
+    id?: number;
     customerId: number;
+    contractId: number;
     logDate: string;
     slot: MealSlot;
     timestamp: Date;
-    synced: boolean;
 }
 
 export const db = new Dexie("MealDatabase") as Dexie & {
     customers: EntityTable<Customer, "id">;
+    contracts: EntityTable<Contract, "id">;
     mealLogs: EntityTable<MealLog, "id">;
 };
 
 db.version(1).stores({
-    customers: "++id, name, startDate, endDate, isActive, synced",
-    mealLogs: "++id, customerId, logDate, slot, timestamp, synced, [customerId+logDate], &[customerId+logDate+slot]",
+    customers: "++id, name",
+    contracts: "++id, customerId, startDate, status",
+    mealLogs: "++id, customerId, contractId, logDate, slot, [customerId+logDate+slot]",
 });

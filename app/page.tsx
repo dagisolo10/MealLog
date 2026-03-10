@@ -14,7 +14,7 @@ export default function Home() {
         <main className="flex flex-col">
             <div className="mb-6 flex items-center justify-between">
                 <div>
-                    <p className="text-muted-foreground text-sm font-medium tracking-wider uppercase">Today</p>
+                    <p className="text-muted-foreground text-xl font-medium tracking-wider uppercase">ዛሬ</p>
                     <p className="text-xl font-medium">{getFullDate(new Date().toDateString())}</p>
                 </div>
                 <div className="flex items-center gap-4">
