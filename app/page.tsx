@@ -15,6 +15,8 @@ export default function Home() {
             <div className="mb-6 flex items-center justify-between">
                 <div>
                     <p className="text-muted-foreground text-xl font-medium tracking-wider uppercase">ዛሬ</p>
+                    <p className="text-muted-foreground text-xl font-medium tracking-wider uppercase">ዛሬ</p>
+                    <p className="text-muted-foreground text-xl font-medium tracking-wider uppercase">ዛሬ</p>
                     <p className="text-xl font-medium">{getFullDate(new Date().toDateString())}</p>
                 </div>
                 <div className="flex items-center gap-4">
