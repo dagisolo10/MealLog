@@ -14,8 +14,10 @@ import { getFullDate } from "@/lib/helper-functions";
 import RenewContractDialog from "./renew-alert-dialog";
 
 export default function CustomerDetailsModal({ customer, children }: { customer: Customer; children: React.ReactNode }) {
+    const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [paymentInput, setPaymentInput] = useState("");
+    const [debt, setDebt] = useState("");
     const todayStr = format(new Date(), "yyyy-MM-dd");
 
     const activeContract = useLiveQuery(() => db.contracts.where({ customerId: customer.id, status: "active" }).first(), [customer.id]);
@@ -42,7 +44,23 @@ export default function CustomerDetailsModal({ customer, children }: { customer:
         const newAmount = (activeContract.paidAmount || 0) + Number(paymentInput);
         await db.contracts.update(activeContract.id!, { paidAmount: newAmount });
         setPaymentInput("");
-        window.location.reload();
+        setOpen(false);
+    };
+
+    const handleDebtDecrement = async () => {
+        if (!activeContract || !debt) return;
+        const newAmount = Math.max((activeContract.debt || 0) - Number(debt), 0);
+        await db.contracts.update(activeContract.id!, { debt: newAmount });
+        setDebt("");
+        setOpen(false);
+    };
+
+    const handleDebtIncrement = async () => {
+        if (!activeContract || !debt) return;
+        const newAmount = (activeContract.debt || 0) + Number(debt);
+        await db.contracts.update(activeContract.id!, { debt: newAmount });
+        setDebt("");
+        setOpen(false);
     };
 
     const handleRenew = async (startSlot: MealSlot) => {
@@ -70,12 +88,12 @@ export default function CustomerDetailsModal({ customer, children }: { customer:
     };
 
     return (
-        <Dialog>
+        <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>{children}</DialogTrigger>
-            <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="top-[45%]">
+            <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="top-[50%]">
                 <DialogHeader>
                     <DialogTitle className="text-2xl">{customer.name}</DialogTitle>
-                    <div className="mt-2 flex items-center gap-2 text-lg">
+                    <div className="mt-2 flex items-center gap-2">
                         {stats.isExpired ? (
                             <span className="text-destructive font-bold tracking-tighter uppercase">Expired</span>
                         ) : stats.isWarning ? (
@@ -91,18 +109,23 @@ export default function CustomerDetailsModal({ customer, children }: { customer:
 
                 <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-muted/20 rounded-xl border p-3 text-center">
-                            <p className="text-muted-foreground text-lg font-bold uppercase">በልተዋል</p>
-                            <p className="text-2xl font-black">{stats.totalEaten}</p>
+                        <div className="bg-muted/20 inset-ring-card flex justify-between rounded-xl border px-4 py-2 text-center">
+                            <p className="font-black">{stats.totalEaten}</p>
+                            <p className="text-muted-foreground font-bold uppercase">በልተዋል</p>
                         </div>
-                        <div className={cn("rounded-xl border p-3 text-center", stats.isExpired ? "bg-red-50" : "bg-muted/20")}>
-                            <p className="text-muted-foreground text-lg font-bold uppercase">ቀሪ</p>
-                            <p className={cn("text-2xl font-black", stats.statusColor)}>{stats.mealsLeft}</p>
+                        <div
+                            className={cn(
+                                "inset-ring-card flex justify-between rounded-xl border px-4 py-2 text-center",
+                                stats.isExpired ? "bg-red-50" : "bg-muted/20",
+                            )}
+                        >
+                            <p className={cn("font-black", stats.statusColor)}>{stats.mealsLeft}</p>
+                            <p className="text-muted-foreground font-bold uppercase">ቀሪ</p>
                         </div>
                     </div>
 
                     {(stats.isExpired || stats.isOverEaten) && (
-                        <div className="bg-destructive/10 text-destructive flex items-center gap-2 rounded-lg p-3 text-lg font-bold">
+                        <div className="bg-destructive/10 text-destructive flex items-center gap-2 rounded-lg p-3 font-bold">
                             <AlertCircle className="size-4" />
                             {stats.isOverEaten ? "Limit Exceeded!" : "ኮርትራቱ አልቋል"}
                         </div>
@@ -111,45 +134,74 @@ export default function CustomerDetailsModal({ customer, children }: { customer:
                     <div className="space-y-4 border-t pt-4 text-sm">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                                <span className="text-muted-foreground text-base">
+                                <span className="text-muted-foreground">
                                     የጀመሩበት ቀን <span className="text-secondary-foreground">({stats.startSlotLabel} ላይ)</span>
                                 </span>
                             </div>
-                            <span className="text-base font-medium">{activeContract && getFullDate(activeContract?.startDate)}</span>
+                            <span className="font-medium">{activeContract && getFullDate(activeContract?.startDate)}</span>
                         </div>
 
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                                <span className="text-muted-foreground text-base">
+                                <span className="text-muted-foreground">
                                     የሚያበቃበት ቀን <span className="text-secondary-foreground">({stats.finishSlotLabel} ላይ)</span>
                                 </span>
                             </div>
-                            <span className="text-base font-medium">{activeContract && getFullDate(stats.dynamicEndDate.toISOString())}</span>
+                            <span className="font-medium">{activeContract && getFullDate(stats.dynamicEndDate.toISOString())}</span>
                         </div>
                     </div>
 
-                    <div className="space-y-3 rounded-xl border p-4">
-                        <div className="flex items-center justify-between">
-                            <span className="flex items-center gap-2 text-lg font-medium">
-                                <Wallet className="size-4" /> ክፍያ
-                            </span>
-                            <span className={cn("text-lg font-bold", stats.paymentStatusColor)}>
-                                {activeContract && activeContract.paidAmount >= 5000
-                                    ? "ሙሉ ተከፍሏል"
-                                    : `${5000 - (activeContract?.paidAmount || 0)} ብር ቀሪ`}
-                            </span>
+                    <div className="grid grid-cols-1 gap-4">
+                        <div className="space-y-3 rounded-xl border p-4">
+                            <div className="flex items-center justify-between">
+                                <span className="flex items-center gap-2 font-medium">
+                                    <Wallet className="size-4" /> ክፍያ
+                                </span>
+                                <span className={cn("font-bold", stats.paymentStatusColor)}>
+                                    {activeContract && activeContract.paidAmount >= 5000
+                                        ? "ሙሉ ተከፍሏል"
+                                        : `${5000 - (activeContract?.paidAmount || 0)} ብር ቀሪ`}
+                                </span>
+                            </div>
+                            <div className="flex gap-2">
+                                <Input
+                                    type="number"
+                                    placeholder="ክፍያ መጠን"
+                                    value={paymentInput}
+                                    onChange={(e) => setPaymentInput(e.target.value)}
+                                    className="h-9"
+                                />
+                                <Button size="sm" className="h-9 text-base" onClick={handleUpdatePayment} disabled={!paymentInput || !activeContract}>
+                                    ክፍያ ፈጽም
+                                </Button>
+                            </div>
                         </div>
-                        <div className="flex gap-2">
-                            <Input
-                                type="number"
-                                placeholder="ክፍያ መጠን"
-                                value={paymentInput}
-                                onChange={(e) => setPaymentInput(e.target.value)}
-                                className="h-9"
-                            />
-                            <Button size="sm" className="h-9 text-base" onClick={handleUpdatePayment} disabled={!paymentInput || !activeContract}>
-                                ክፍያ ፈጽም
-                            </Button>
+
+                        <div className="space-y-3 rounded-xl border p-4">
+                            <div className="flex items-center justify-between">
+                                <span className="flex items-center gap-2 font-medium">
+                                    <Wallet className="size-4" /> ዱቤ
+                                </span>
+                                <span className={cn("font-bold", (stats?.debt || 0) > 0 ? "text-red-500" : "text-emerald-500")}>
+                                    {activeContract && activeContract.debt && activeContract?.debt <= 0
+                                        ? "ዱቤ የለም"
+                                        : `${activeContract?.debt || 0} ብር ዱቤ ቀሪ`}
+                                </span>
+                            </div>
+                            <div className="flex justify-between gap-2">
+                                <Button size="sm" className="text-foreground h-9 bg-red-500/70 text-base" onClick={handleDebtIncrement}>
+                                    ዱቤ ጨምር
+                                </Button>
+                                <Input type="number" placeholder="ዱቤ መጠን" value={debt} onChange={(e) => setDebt(e.target.value)} className="h-9" />
+                                <Button
+                                    size="sm"
+                                    className="text-foreground h-9 bg-emerald-500 text-base"
+                                    onClick={handleDebtDecrement}
+                                    disabled={stats.debt === 0 || !activeContract}
+                                >
+                                    ዱቤ ክፈል
+                                </Button>
+                            </div>
                         </div>
                     </div>
 

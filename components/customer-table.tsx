@@ -131,6 +131,7 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
                     <TableHeader>
                         <TableRow className="bg-muted/30">
                             <TableHead className="bg-background text-muted-foreground sticky left-0 z-30 min-w-16 border-r text-center">#</TableHead>
+                            <TableHead className="min-w-24 border-r text-center">ዱቤ</TableHead>
                             <TableHead ref={startRef} className="min-w-48 border-r">
                                 ስም / ማብቂያ ቀን
                             </TableHead>
@@ -175,6 +176,7 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
                                 const stats = calculateMealStats(activeContract, customerLogs);
                                 const remaining = (stats.remainingAmount && stats.remainingAmount) || 0;
                                 const fullyPaid = remaining <= 0;
+                                const debt = Math.max(stats?.debt || 0, 0);
 
                                 const pageMonth = Number(selectedMonth);
                                 const contractStart = activeContract
@@ -195,6 +197,15 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
                                             className="bg-background sticky left-0 z-10 border-r text-center text-lg"
                                         >
                                             {actualIndex}
+                                        </TableCell>
+
+                                        <TableCell
+                                            className={cn(
+                                                debt > 0 ? "text-red-500" : "text-emerald-500",
+                                                "min-w-24 border-r text-center text-lg font-black",
+                                            )}
+                                        >
+                                            {debt > 0 ? debt : "ከዱቤ ነጻ"}
                                         </TableCell>
                                         <TableCell className="min-w-48 border-r">
                                             <CustomerDetailsModal customer={customer}>

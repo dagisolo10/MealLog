@@ -74,7 +74,10 @@ export function calculateMealStats(activeContract: Contract | undefined, allLogs
 
     const remainingAmount = 5000 - activeContract.paidAmount;
 
+    const debt = activeContract.debt || 0;
+
     return {
+        debt,
         remainingAmount,
         totalEaten,
         mealsLeft,
