@@ -15,6 +15,7 @@ export interface Contract {
     startSlot: MealSlot;
     paidAmount: number;
     debt?: number;
+    test?: number;
     status: "active" | "completed";
 }
 
@@ -38,14 +39,35 @@ db.version(1).stores({
     contracts: "++id, customerId, startDate, status",
     mealLogs: "++id, customerId, contractId, logDate, slot, [customerId+logDate+slot]",
 });
-db.version(2)
+
+// db.version(2)
+//     .stores({
+//         customers: "++id, name",
+//         contracts: "++id, customerId, startDate, status, debt",
+//         mealLogs: "++id, customerId, contractId, logDate, slot, [customerId+logDate+slot]",
+//     })
+//     .upgrade(async (trx) => {
+//         const contracts = await trx.table("contracts").toArray();
+//         const updated = contracts.map((contract) => ({ ...contract, debt: 0 }));
+//         await trx.table("contracts").bulkPut(updated);
+//     });
+
+db.version(3)
     .stores({
         customers: "++id, name",
-        contracts: "++id, customerId, startDate, status, debt",
+        contracts: "++id, customerId, startDate, endDate, startSlot, paidAmount, status, debt, test", // include ALL old keys
         mealLogs: "++id, customerId, contractId, logDate, slot, [customerId+logDate+slot]",
     })
     .upgrade(async (trx) => {
         const contracts = await trx.table("contracts").toArray();
-        const updated = contracts.map((contract) => ({ ...contract, debt: 0 }));
-        await trx.table("contracts").bulkPut(updated);
+        for (const contract of contracts) {
+            if (contract.debt === undefined) {
+                contract.debt = 0;
+                await trx.table("contracts").put(contract);
+            }
+            if (contract.test === undefined) {
+                contract.test = 0;
+                await trx.table("contracts").put(contract);
+            }
+        }
     });

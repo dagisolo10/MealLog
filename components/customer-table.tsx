@@ -205,7 +205,7 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
                                                 "min-w-24 border-r text-center text-lg font-black",
                                             )}
                                         >
-                                            {debt > 0 ? debt : "ከዱቤ ነጻ"}
+                                            {debt > 0 ? debt : "ከዱቤ ነጻ"} {activeContract?.test}
                                         </TableCell>
                                         <TableCell className="min-w-48 border-r">
                                             <CustomerDetailsModal customer={customer}>
@@ -251,7 +251,7 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
                                                     key={i}
                                                     className={cn(
                                                         "border-r p-0 text-center transition-colors",
-                                                        isToday && "bg-accent ring-x-1 ring-primary/20", // Light highlight for the column
+                                                        isToday && "bg-accent ring-x-1 ring-primary/20",
                                                     )}
                                                 >
                                                     {isBeforeJoin ? (
