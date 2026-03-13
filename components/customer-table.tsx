@@ -205,7 +205,7 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
                                                 "min-w-24 border-r text-center text-lg font-black",
                                             )}
                                         >
-                                            {debt > 0 ? debt : "ከዱቤ ነጻ"} {activeContract?.test}
+                                            {debt > 0 ? debt : "ከዱቤ ነጻ"}
                                         </TableCell>
                                         <TableCell className="min-w-48 border-r">
                                             <CustomerDetailsModal customer={customer}>
