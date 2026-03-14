@@ -118,11 +118,16 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
                 <Table>
                     <TableHeader>
                         <TableRow className="bg-muted/30">
-                            <TableHead className="bg-background text-muted-foreground sticky left-0 z-30 min-w-16 border-r text-center">#</TableHead>
-                            <TableHead className="min-w-24 border-r text-center">ዱቤ</TableHead>
-                            <TableHead ref={startRef} className="min-w-48 border-r">
-                                ስም / ማብቂያ ቀን
+                            <TableHead
+                                onClick={() => todayRef.current && todayRef.current.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" })}
+                                className="bg-background text-muted-foreground sticky left-0 z-30 min-w-16 border-r text-center"
+                            >
+                                #
                             </TableHead>
+                            <TableHead ref={startRef} className="min-w-24 border-r text-center">
+                                ዱቤ
+                            </TableHead>
+                            <TableHead className="min-w-48 border-r">ስም / ማብቂያ ቀን</TableHead>
                             <TableHead className="min-w-24 border-r">ቀሪ ሂሳብ</TableHead>
                             {Array.from({ length: daysInMonth }).map((_, i) => {
                                 const dayNum = i + 1;
@@ -158,7 +163,7 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
                                 const remaining = (stats.remainingAmount && stats.remainingAmount) || 0;
                                 const fullyPaid = remaining <= 0;
                                 const debt = Math.max(stats?.debt || 0, 0);
-                                
+
                                 const phone = activeContract?.phone ? `tel:+251${activeContract?.phone}` : "/";
                                 const phoneDisplay = activeContract?.phone ? `0${activeContract.phone}` : "ስልክ የለም";
 
