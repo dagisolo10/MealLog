@@ -7,7 +7,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { format, addDays } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Check, Utensils, AlertCircle, Wallet } from "lucide-react";
+import { Check, Utensils, AlertCircle, Wallet, Phone } from "lucide-react";
 import { calculateMealStats } from "@/lib/meal-stats";
 import { cn } from "@/lib/utils";
 import { getFullDate } from "@/lib/helper-functions";
@@ -17,6 +17,7 @@ export default function CustomerDetailsModal({ customer, children }: { customer:
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [paymentInput, setPaymentInput] = useState("");
+    const [phone, setPhone] = useState("");
     const [debt, setDebt] = useState("");
     const todayStr = format(new Date(), "yyyy-MM-dd");
 
@@ -63,6 +64,13 @@ export default function CustomerDetailsModal({ customer, children }: { customer:
         setOpen(false);
     };
 
+    const handlePhoneInput = async () => {
+        if (!activeContract || !phone) return;
+        await db.contracts.update(activeContract.id!, { phone: Number(phone) });
+        setPhone("");
+        setOpen(false);
+    };
+
     const handleRenew = async (startSlot: MealSlot) => {
         const now = new Date();
 
@@ -90,7 +98,8 @@ export default function CustomerDetailsModal({ customer, children }: { customer:
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>{children}</DialogTrigger>
-            <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="top-[50%]">
+            <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="top-[50%] h-[90%] overflow-y-auto">
+                {/* Name and remaining days */}
                 <DialogHeader>
                     <DialogTitle className="text-2xl">{customer.name}</DialogTitle>
                     <div className="mt-2 flex items-center gap-2">
@@ -108,21 +117,17 @@ export default function CustomerDetailsModal({ customer, children }: { customer:
                 </DialogHeader>
 
                 <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-3">
+                    {/* Meal Count */}
+                    <section className="grid grid-cols-2 gap-3">
                         <div className="bg-muted/20 inset-ring-card flex justify-between rounded-xl border px-4 py-2 text-center">
                             <p className="font-black">{stats.totalEaten}</p>
                             <p className="text-muted-foreground font-bold uppercase">በልተዋል</p>
                         </div>
-                        <div
-                            className={cn(
-                                "inset-ring-card flex justify-between rounded-xl border px-4 py-2 text-center",
-                                stats.isExpired ? "bg-red-50" : "bg-muted/20",
-                            )}
-                        >
+                        <div className={cn("inset-ring-card flex justify-between rounded-xl border px-4 py-2 text-center", stats.isExpired ? "bg-red-50" : "bg-muted/20")}>
                             <p className={cn("font-black", stats.statusColor)}>{stats.mealsLeft}</p>
                             <p className="text-muted-foreground font-bold uppercase">ቀሪ</p>
                         </div>
-                    </div>
+                    </section>
 
                     {(stats.isExpired || stats.isOverEaten) && (
                         <div className="bg-destructive/10 text-destructive flex items-center gap-2 rounded-lg p-3 font-bold">
@@ -131,7 +136,8 @@ export default function CustomerDetailsModal({ customer, children }: { customer:
                         </div>
                     )}
 
-                    <div className="space-y-4 border-t pt-4 text-sm">
+                    {/* Start and expiration dates */}
+                    <section className="space-y-4 border-t pt-4 text-sm">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <span className="text-muted-foreground">
@@ -149,43 +155,34 @@ export default function CustomerDetailsModal({ customer, children }: { customer:
                             </div>
                             <span className="font-medium">{activeContract && getFullDate(stats.dynamicEndDate.toISOString())}</span>
                         </div>
-                    </div>
+                    </section>
 
-                    <div className="grid grid-cols-1 gap-4">
+                    {/* payment and phone number inputs */}
+                    <section className="grid grid-cols-1 gap-4">
+                        {/* payment */}
                         <div className="space-y-3 rounded-xl border p-4">
                             <div className="flex items-center justify-between">
                                 <span className="flex items-center gap-2 font-medium">
                                     <Wallet className="size-4" /> ክፍያ
                                 </span>
-                                <span className={cn("font-bold", stats.paymentStatusColor)}>
-                                    {activeContract && activeContract.paidAmount >= 5000
-                                        ? "ሙሉ ተከፍሏል"
-                                        : `${5000 - (activeContract?.paidAmount || 0)} ብር ቀሪ`}
-                                </span>
+                                <span className={cn("font-bold", stats.paymentStatusColor)}>{activeContract && activeContract.paidAmount >= 5000 ? "ሙሉ ተከፍሏል" : `${5000 - (activeContract?.paidAmount || 0)} ብር ቀሪ`}</span>
                             </div>
                             <div className="flex gap-2">
-                                <Input
-                                    type="number"
-                                    placeholder="ክፍያ መጠን"
-                                    value={paymentInput}
-                                    onChange={(e) => setPaymentInput(e.target.value)}
-                                    className="h-9"
-                                />
+                                <Input type="number" placeholder="ክፍያ መጠን" value={paymentInput} onChange={(e) => setPaymentInput(e.target.value)} className="h-9" />
                                 <Button size="sm" className="h-9 text-base" onClick={handleUpdatePayment} disabled={!paymentInput || !activeContract}>
                                     ክፍያ ፈጽም
                                 </Button>
                             </div>
                         </div>
 
+                        {/* Debt */}
                         <div className="space-y-3 rounded-xl border p-4">
                             <div className="flex items-center justify-between">
                                 <span className="flex items-center gap-2 font-medium">
                                     <Wallet className="size-4" /> ዱቤ
                                 </span>
                                 <span className={cn("font-bold", (stats?.debt || 0) > 0 ? "text-red-500" : "text-emerald-500")}>
-                                    {activeContract && activeContract.debt && activeContract?.debt <= 0
-                                        ? "ዱቤ የለም"
-                                        : `${activeContract?.debt || 0} ብር ዱቤ ቀሪ`}
+                                    {activeContract && activeContract.debt && activeContract?.debt <= 0 ? "ዱቤ የለም" : `${activeContract?.debt || 0} ብር ዱቤ ቀሪ`}
                                 </span>
                             </div>
                             <div className="flex justify-between gap-2">
@@ -193,37 +190,39 @@ export default function CustomerDetailsModal({ customer, children }: { customer:
                                     ዱቤ ጨምር
                                 </Button>
                                 <Input type="number" placeholder="ዱቤ መጠን" value={debt} onChange={(e) => setDebt(e.target.value)} className="h-9" />
-                                <Button
-                                    size="sm"
-                                    className="text-foreground h-9 bg-emerald-500 text-base"
-                                    onClick={handleDebtDecrement}
-                                    disabled={stats.debt === 0 || !activeContract}
-                                >
+                                <Button size="sm" className="text-foreground h-9 bg-emerald-500 text-base" onClick={handleDebtDecrement} disabled={stats.debt === 0 || !activeContract}>
                                     ዱቤ ክፈል
                                 </Button>
                             </div>
                         </div>
-                    </div>
 
-                    <div className="grid gap-2">
-                        <MealButton
-                            label="ቁርስ / ምሳ"
-                            isDone={stats.hasEatenSlot1}
-                            disabled={!activeContract || stats.isExpired || loading}
-                            onClick={() => handleLogMeal("slot1")}
-                        />
-                        <MealButton
-                            label="እራት"
-                            isDone={stats.hasEatenSlot2}
-                            disabled={!activeContract || stats.isExpired || loading}
-                            onClick={() => handleLogMeal("slot2")}
-                        />
-                    </div>
+                        {/* Phone number */}
+                        <div className="space-y-3 rounded-xl border p-4">
+                            <div className="flex items-center justify-between">
+                                <span className="flex items-center gap-2 font-medium">
+                                    <Phone className="size-4" /> ስልክ
+                                </span>
+                            </div>
+                            <div className="flex gap-2">
+                                <Input type="number" placeholder="ስልክ ቁጥር" value={phone} onChange={(e) => setPhone(e.target.value)} className="h-9" />
+                                <Button size="sm" className="h-9 text-base" onClick={handlePhoneInput} disabled={!phone || !activeContract}>
+                                    ስልክ መዝግብ
+                                </Button>
+                            </div>
+                        </div>
+                    </section>
 
-                    <div className="flex items-center justify-between border-t pt-4">
+                    {/* Meal check buttons */}
+                    <section className="grid gap-2">
+                        <MealButton label="ቁርስ / ምሳ" isDone={stats.hasEatenSlot1} disabled={!activeContract || stats.isExpired || loading} onClick={() => handleLogMeal("slot1")} />
+                        <MealButton label="እራት" isDone={stats.hasEatenSlot2} disabled={!activeContract || stats.isExpired || loading} onClick={() => handleLogMeal("slot2")} />
+                    </section>
+
+                    {/* Delete and renew */}
+                    <footer className="flex items-center justify-between border-t pt-4">
                         <DeleteAlertDialog customerName={customer.name} onDelete={handleDelete} />
                         <RenewContractDialog customerName={customer.name} onRenew={handleRenew} />
-                    </div>
+                    </footer>
                 </div>
             </DialogContent>
         </Dialog>
@@ -236,10 +235,7 @@ function MealButton({ label, isDone, onClick, disabled }: { label: string; isDon
             variant={isDone ? "default" : "outline"}
             onClick={onClick}
             disabled={isDone || disabled}
-            className={cn(
-                "disabled:text-foreground h-16 w-full justify-between px-4 disabled:opacity-100",
-                isDone && "bg-green-600 opacity-100 hover:bg-green-600",
-            )}
+            className={cn("disabled:text-foreground h-16 w-full justify-between px-4 disabled:opacity-100", isDone && "bg-green-600 opacity-100 hover:bg-green-600")}
         >
             <div className="flex items-center gap-3">
                 <Utensils className={cn("size-5", isDone ? "text-white" : "text-muted-foreground")} />

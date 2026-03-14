@@ -29,12 +29,11 @@ export default function CustomerModal() {
         const endDate = addDays(startDate, 30);
 
         try {
-            const customerId = await db.customers.add({
-                name: String(payload.name).trim(),
-            });
+            const customerId = await db.customers.add({ name: String(payload.name).trim() });
 
             await db.contracts.add({
                 customerId: customerId as number,
+                phone: Number(payload.phone),
                 startDate: startDate.toISOString(),
                 endDate: endDate.toISOString(),
                 startSlot: startSlot as MealSlot,
@@ -61,7 +60,7 @@ export default function CustomerModal() {
                 </Button>
             </DialogTrigger>
 
-            <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
+            <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="top-[50%]">
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <DialogHeader>
                         <DialogTitle>Add Customer</DialogTitle>
@@ -77,6 +76,11 @@ export default function CustomerModal() {
                         <Field>
                             <Label className="text-lg">መጀመሪያ ቀን</Label>
                             <EthiopianDatePicker date={startDate} setDate={setStartDate} />
+                        </Field>
+
+                        <Field>
+                            <Label className="text-lg">ስልክ ቁጥር</Label>
+                            <Input name="phone" type="number" />
                         </Field>
 
                         <FieldGroup className="flex-row items-center gap-4">

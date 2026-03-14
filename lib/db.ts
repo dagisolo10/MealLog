@@ -15,6 +15,7 @@ export interface Contract {
     startSlot: MealSlot;
     paidAmount: number;
     debt?: number;
+    phone?: number;
     status: "active" | "completed";
 }
 
@@ -39,17 +40,23 @@ db.version(1).stores({
     mealLogs: "++id, customerId, contractId, logDate, slot, [customerId+logDate+slot]",
 });
 
-db.version(4)
+db.version(4).stores({
+    customers: "++id, name",
+    contracts: "++id, customerId, startDate, endDate, startSlot, paidAmount, status, debt",
+    mealLogs: "++id, customerId, contractId, logDate, slot, [customerId+logDate+slot]",
+});
+
+db.version(5)
     .stores({
         customers: "++id, name",
-        contracts: "++id, customerId, startDate, endDate, startSlot, paidAmount, status, debt", // include ALL old keys
+        contracts: "++id, customerId, startDate, endDate, startSlot, paidAmount, status, debt, phone",
         mealLogs: "++id, customerId, contractId, logDate, slot, [customerId+logDate+slot]",
     })
     .upgrade(async (trx) => {
         const contracts = await trx.table("contracts").toArray();
         for (const contract of contracts) {
-            if (contract.debt === undefined) {
-                contract.debt = 0;
+            if (contract.phone === undefined) {
+                contract.phone = 0;
                 await trx.table("contracts").put(contract);
             }
         }

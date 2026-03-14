@@ -13,6 +13,7 @@ import { Button } from "./ui/button";
 import { getFullDate } from "@/lib/helper-functions";
 import { calculateMealStats } from "@/lib/meal-stats";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 export default function CustomerTable({ customers }: { customers: Customer[] }) {
     const [query, setQuery] = useState("");
@@ -76,23 +77,12 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
                     <div className="group relative w-full">
                         <div className="relative">
                             <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-                            <Input
-                                value={query}
-                                onChange={(e) => setQuery(e.target.value)}
-                                placeholder="ፈልግ..."
-                                id="query"
-                                className="pl-9 text-lg"
-                            />
+                            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="ፈልግ..." id="query" className="pl-9 text-lg" />
                         </div>
                     </div>
 
                     {selectedMonth === currentEth.month.toString() && (
-                        <Button
-                            onClick={() =>
-                                todayRef.current && todayRef.current.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" })
-                            }
-                            className="flex items-center gap-2 text-base"
-                        >
+                        <Button onClick={() => todayRef.current && todayRef.current.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" })} className="flex items-center gap-2 text-base">
                             <CalendarDays className="size-4" />
                             ወደ ዛሬ
                         </Button>
@@ -117,9 +107,7 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
                             >
                                 <span className="text-lg">{name}</span>
 
-                                {isCurrentMonth && (
-                                    <div className={`absolute -top-1 -right-1 size-2 rounded-full bg-blue-500 ${isSelected ? "hidden" : "block"}`} />
-                                )}
+                                {isCurrentMonth && <div className={`absolute -top-1 -right-1 size-2 rounded-full bg-blue-500 ${isSelected ? "hidden" : "block"}`} />}
                             </Button>
                         );
                     })}
@@ -140,14 +128,7 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
                                 const dayNum = i + 1;
                                 const isToday = dayNum === currentEth.day && selectedMonth === currentEth.month.toString();
                                 return (
-                                    <TableHead
-                                        key={i}
-                                        ref={isToday ? todayRef : null}
-                                        className={cn(
-                                            "min-w-18 border-r pr-2 text-center transition-colors",
-                                            isToday ? "text-background bg-foreground font-black" : "text-muted-foreground/90",
-                                        )}
-                                    >
+                                    <TableHead key={i} ref={isToday ? todayRef : null} className={cn("min-w-18 border-r pr-2 text-center transition-colors", isToday ? "text-background bg-foreground font-black" : "text-muted-foreground/90")}>
                                         {dayNum.toString().padStart(2, "0")}
                                     </TableHead>
                                 );
@@ -177,35 +158,29 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
                                 const remaining = (stats.remainingAmount && stats.remainingAmount) || 0;
                                 const fullyPaid = remaining <= 0;
                                 const debt = Math.max(stats?.debt || 0, 0);
+                                
+                                const phone = activeContract?.phone ? `tel:+251${activeContract?.phone}` : "/";
+                                const phoneDisplay = activeContract?.phone ? `0${activeContract.phone}` : "ስልክ የለም";
 
                                 const pageMonth = Number(selectedMonth);
-                                const contractStart = activeContract
-                                    ? toEC(
-                                          new Date(activeContract.startDate).getFullYear(),
-                                          new Date(activeContract.startDate).getMonth() + 1,
-                                          new Date(activeContract.startDate).getDate(),
-                                      )
-                                    : null;
+                                const contractStart = activeContract ? toEC(new Date(activeContract.startDate).getFullYear(), new Date(activeContract.startDate).getMonth() + 1, new Date(activeContract.startDate).getDate()) : null;
 
                                 return (
                                     <TableRow key={customer.id}>
                                         <TableCell
-                                            onClick={() =>
-                                                startRef.current &&
-                                                startRef.current.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" })
-                                            }
+                                            onClick={() => startRef.current && startRef.current.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" })}
                                             className="bg-background sticky left-0 z-10 border-r text-center text-lg"
                                         >
                                             {actualIndex}
                                         </TableCell>
 
-                                        <TableCell
-                                            className={cn(
-                                                debt > 0 ? "text-red-500" : "text-emerald-500",
-                                                "min-w-24 border-r text-center text-lg font-black",
-                                            )}
-                                        >
-                                            {debt > 0 ? debt : "ከዱቤ ነጻ"}
+                                        <TableCell className="min-w-24 border-r text-center">
+                                            <div className="grid">
+                                                <span className={cn(debt > 0 ? "text-red-500" : "text-emerald-500", "text-lg font-black")}>{debt > 0 ? debt : "ከዱቤ ነጻ"}</span>
+                                                <Link href={phone} className="text-xs tracking-wider">
+                                                    {phoneDisplay}
+                                                </Link>
+                                            </div>
                                         </TableCell>
                                         <TableCell className="min-w-48 border-r">
                                             <CustomerDetailsModal customer={customer}>
@@ -218,14 +193,7 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
                                                 </div>
                                             </CustomerDetailsModal>
                                         </TableCell>
-                                        <TableCell
-                                            className={cn(
-                                                "min-w-24 border-r text-center text-lg font-black",
-                                                fullyPaid ? "text-emerald-500" : "text-rose-500",
-                                            )}
-                                        >
-                                            {fullyPaid ? "ተከፍሏል" : stats.remainingAmount}
-                                        </TableCell>
+                                        <TableCell className={cn("min-w-24 border-r text-center text-lg font-black", fullyPaid ? "text-emerald-500" : "text-rose-500")}>{fullyPaid ? "ተከፍሏል" : stats.remainingAmount}</TableCell>
 
                                         {Array.from({ length: daysInMonth }).map((_, i) => {
                                             const dayNum = i + 1;
@@ -233,27 +201,15 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
                                                 !contractStart ||
                                                 activeYear < contractStart.year ||
                                                 (activeYear === contractStart.year && pageMonth < contractStart.month) ||
-                                                (activeYear === contractStart.year &&
-                                                    pageMonth === contractStart.month &&
-                                                    dayNum < contractStart.day);
+                                                (activeYear === contractStart.year && pageMonth === contractStart.month && dayNum < contractStart.day);
 
-                                            const isFirstDay =
-                                                contractStart &&
-                                                activeYear === contractStart.year &&
-                                                pageMonth === contractStart.month &&
-                                                dayNum === contractStart.day;
+                                            const isFirstDay = contractStart && activeYear === contractStart.year && pageMonth === contractStart.month && dayNum === contractStart.day;
                                             const hideSlot1 = isFirstDay && activeContract?.startSlot === "slot2";
 
                                             const isToday = dayNum === currentEth.day && selectedMonth === currentEth.month.toString();
 
                                             return (
-                                                <TableCell
-                                                    key={i}
-                                                    className={cn(
-                                                        "border-r p-0 text-center transition-colors",
-                                                        isToday && "bg-accent ring-x-1 ring-primary/20",
-                                                    )}
-                                                >
+                                                <TableCell key={i} className={cn("border-r p-0 text-center transition-colors", isToday && "bg-accent ring-x-1 ring-primary/20")}>
                                                     {isBeforeJoin ? (
                                                         <Minus className="mx-auto size-3 opacity-40" />
                                                     ) : (

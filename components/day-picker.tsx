@@ -21,19 +21,13 @@ export function EthiopianDatePicker({ date, setDate }: Props) {
 
         const ec = toEC(date.getFullYear(), date.getMonth() + 1, date.getDate());
 
-        console.log(`${monthNames.amharic[ec.month - 1]} ${ec.day}, ${ec.year}`);
-        console.log(ec.day, ec.month, ec.year);
         return `${monthNames.amharic[ec.month - 1]} ${ec.day}, ${ec.year}`;
     };
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger onClick={() => setOpen(true)} asChild>
-                <Button
-                    type="button"
-                    variant={"outline"}
-                    className={cn("w-full justify-start text-left font-normal text-lg", !date && "text-muted-foreground")}
-                >
+                <Button type="button" variant={"outline"} className={cn("w-full justify-start text-left text-lg font-normal", !date && "text-muted-foreground")}>
                     <CalendarIcon className="size-4" />
                     {getButtonLabel()}
                 </Button>
