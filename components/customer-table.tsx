@@ -31,7 +31,7 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
 
     const filtered = useMemo(() => customers.filter((customer) => customer.name.toLowerCase().includes(query.toLowerCase())), [customers, query]);
 
-    const perPage = 60;
+    const perPage = 300;
     const startIndex = (currentPage - 1) * perPage;
     const totalPages = Math.ceil(filtered.length / perPage);
     const paginatedCustomers = filtered.slice(startIndex, startIndex + perPage);
