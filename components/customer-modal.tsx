@@ -10,12 +10,14 @@ import { Field, FieldGroup } from "./ui/field";
 import { EthiopianDatePicker } from "./day-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { addDays } from "date-fns";
+import { Checkbox } from "./ui/checkbox";
 
 export default function CustomerModal() {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [startDate, setStartDate] = useState<Date | undefined>(new Date());
     const [startSlot, setStartSlot] = useState<string>("slot1");
+    const [isHalf, setIsHalf] = useState(false);
 
     async function handleSubmit(e: SyntheticEvent<HTMLFormElement>) {
         e.preventDefault();
@@ -38,6 +40,7 @@ export default function CustomerModal() {
                 endDate: endDate.toISOString(),
                 startSlot: startSlot as MealSlot,
                 paidAmount: Number(payload.paid) || 0,
+                half: isHalf,
                 status: "active",
             });
 
@@ -67,7 +70,7 @@ export default function CustomerModal() {
                         <DialogDescription>Create a new customer and start 60-meal contract.</DialogDescription>
                     </DialogHeader>
 
-                    <FieldGroup>
+                    <FieldGroup className="gap-4">
                         <Field>
                             <Label className="text-lg">የደንበኘ ስም</Label>
                             <Input name="name" required />
@@ -81,6 +84,11 @@ export default function CustomerModal() {
                         <Field>
                             <Label className="text-lg">ስልክ ቁጥር</Label>
                             <Input name="phone" type="number" />
+                        </Field>
+
+                        <Field orientation={"horizontal"} className="my-2 flex items-center">
+                            <Label className="flex-1 text-lg">ግማሽ ኮንትራት (በቀን አንዴ)</Label>
+                            <Checkbox className="size-6" checked={isHalf} onCheckedChange={(checked) => setIsHalf(!!checked)} />
                         </Field>
 
                         <FieldGroup className="flex-row items-center gap-4">

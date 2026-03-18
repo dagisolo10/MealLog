@@ -1,10 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Customer, db, MealSlot } from "@/lib/db";
 import DeleteAlertDialog from "./delete-alert-dialog";
 import { useLiveQuery } from "dexie-react-hooks";
-import { format, addDays } from "date-fns";
+import { format, addDays, startOfDay } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Check, Utensils, AlertCircle, Wallet, Phone } from "lucide-react";
@@ -12,6 +12,9 @@ import { calculateMealStats } from "@/lib/meal-stats";
 import { cn } from "@/lib/utils";
 import { getFullDate } from "@/lib/helper-functions";
 import RenewContractDialog from "./renew-alert-dialog";
+import { Field } from "./ui/field";
+import { Label } from "./ui/label";
+import { Checkbox } from "./ui/checkbox";
 
 export default function CustomerDetailsModal({ customer, children }: { customer: Customer; children: React.ReactNode }) {
     const [open, setOpen] = useState(false);
@@ -20,9 +23,15 @@ export default function CustomerDetailsModal({ customer, children }: { customer:
     const [phone, setPhone] = useState("");
     const [debt, setDebt] = useState("");
     const todayStr = format(new Date(), "yyyy-MM-dd");
+    const [isHalf, setIsHalf] = useState(false);
 
     const activeContract = useLiveQuery(() => db.contracts.where({ customerId: customer.id, status: "active" }).first(), [customer.id]);
 
+    useEffect(() => {
+        if (activeContract) setIsHalf(!!activeContract.half);
+    }, [activeContract]);
+
+    const TOTAL_COST = activeContract?.half ? 2500 : 5000;
     const allCustomerLogs = useLiveQuery(() => db.mealLogs.where("customerId").equals(customer.id!).toArray(), [customer.id]) || [];
 
     const stats = calculateMealStats(activeContract, allCustomerLogs);
@@ -68,13 +77,12 @@ export default function CustomerDetailsModal({ customer, children }: { customer:
         if (!activeContract || !phone) return;
         await db.contracts.update(activeContract.id!, { phone: Number(phone) });
         setPhone("");
-        setOpen(false);
     };
 
     const handleRenew = async (startSlot: MealSlot) => {
         const now = new Date();
-
-        const endDate = addDays(now, 30);
+        const startDate = startOfDay(now);
+        const endDate = addDays(startDate, 30);
 
         if (activeContract) await db.contracts.update(activeContract.id!, { status: "completed" });
 
@@ -85,6 +93,7 @@ export default function CustomerDetailsModal({ customer, children }: { customer:
             startSlot: startSlot,
             paidAmount: 0,
             status: "active",
+            half: isHalf,
         });
     };
 
@@ -99,7 +108,6 @@ export default function CustomerDetailsModal({ customer, children }: { customer:
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>{children}</DialogTrigger>
             <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="top-[50%] h-[90%] overflow-y-auto">
-                {/* Name and remaining days */}
                 <DialogHeader>
                     <DialogTitle className="text-2xl">{customer.name}</DialogTitle>
                     <div className="mt-2 flex items-center gap-2">
@@ -157,6 +165,19 @@ export default function CustomerDetailsModal({ customer, children }: { customer:
                         </div>
                     </section>
 
+                    <Field orientation={"horizontal"} className="my-2 flex items-center">
+                        <Label className="flex-1 text-lg">ግማሽ ኮንትራት (በቀን አንዴ)</Label>
+                        <Checkbox
+                            className="size-6"
+                            checked={isHalf}
+                            onCheckedChange={async (checked) => {
+                                const val = !!checked;
+                                setIsHalf(val);
+                                if (activeContract) await db.contracts.update(activeContract.id!, { half: val });
+                            }}
+                        />
+                    </Field>
+
                     {/* payment and phone number inputs */}
                     <section className="grid grid-cols-1 gap-4">
                         {/* payment */}
@@ -165,7 +186,7 @@ export default function CustomerDetailsModal({ customer, children }: { customer:
                                 <span className="flex items-center gap-2 font-medium">
                                     <Wallet className="size-4" /> ክፍያ
                                 </span>
-                                <span className={cn("font-bold", stats.paymentStatusColor)}>{activeContract && activeContract.paidAmount >= 5000 ? "ሙሉ ተከፍሏል" : `${5000 - (activeContract?.paidAmount || 0)} ብር ቀሪ`}</span>
+                                <span className={cn("font-bold", stats.paymentStatusColor)}>{activeContract && activeContract.paidAmount >= TOTAL_COST ? "ሙሉ ተከፍሏል" : `${TOTAL_COST - (activeContract?.paidAmount || 0)} ብር ቀሪ`}</span>
                             </div>
                             <div className="flex gap-2">
                                 <Input type="number" placeholder="ክፍያ መጠን" value={paymentInput} onChange={(e) => setPaymentInput(e.target.value)} className="h-9" />
@@ -214,14 +235,14 @@ export default function CustomerDetailsModal({ customer, children }: { customer:
 
                     {/* Meal check buttons */}
                     <section className="grid gap-2">
-                        <MealButton label="ቁርስ / ምሳ" isDone={stats.hasEatenSlot1} disabled={!activeContract || stats.isExpired || loading} onClick={() => handleLogMeal("slot1")} />
+                        {!activeContract?.half && <MealButton label="ቁርስ / ምሳ" isDone={stats.hasEatenSlot1} disabled={!activeContract || stats.isExpired || loading} onClick={() => handleLogMeal("slot1")} />}
                         <MealButton label="እራት" isDone={stats.hasEatenSlot2} disabled={!activeContract || stats.isExpired || loading} onClick={() => handleLogMeal("slot2")} />
                     </section>
 
                     {/* Delete and renew */}
                     <footer className="flex items-center justify-between border-t pt-4">
                         <DeleteAlertDialog customerName={customer.name} onDelete={handleDelete} />
-                        <RenewContractDialog customerName={customer.name} onRenew={handleRenew} />
+                        <RenewContractDialog customerName={customer.name} onRenew={handleRenew} isHalf={isHalf} setIsHalf={setIsHalf} />
                     </footer>
                 </div>
             </DialogContent>

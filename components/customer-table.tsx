@@ -31,7 +31,7 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
 
     const filtered = useMemo(() => customers.filter((customer) => customer.name.toLowerCase().includes(query.toLowerCase())), [customers, query]);
 
-    const perPage = 60;
+    const perPage = 300;
     const startIndex = (currentPage - 1) * perPage;
     const totalPages = Math.ceil(filtered.length / perPage);
     const paginatedCustomers = filtered.slice(startIndex, startIndex + perPage);
@@ -187,6 +187,7 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
                                                 </Link>
                                             </div>
                                         </TableCell>
+
                                         <TableCell className="min-w-48 border-r">
                                             <CustomerDetailsModal customer={customer}>
                                                 <div className="cursor-pointer space-y-0.5">
@@ -198,6 +199,7 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
                                                 </div>
                                             </CustomerDetailsModal>
                                         </TableCell>
+
                                         <TableCell className={cn("min-w-24 border-r text-center text-lg font-black", fullyPaid ? "text-emerald-500" : "text-rose-500")}>{fullyPaid ? "ተከፍሏል" : stats.remainingAmount}</TableCell>
 
                                         {Array.from({ length: daysInMonth }).map((_, i) => {
@@ -209,7 +211,7 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
                                                 (activeYear === contractStart.year && pageMonth === contractStart.month && dayNum < contractStart.day);
 
                                             const isFirstDay = contractStart && activeYear === contractStart.year && pageMonth === contractStart.month && dayNum === contractStart.day;
-                                            const hideSlot1 = isFirstDay && activeContract?.startSlot === "slot2";
+                                            const hideSlot1 = (isFirstDay && activeContract?.startSlot === "slot2") || activeContract?.half;
 
                                             const isToday = dayNum === currentEth.day && selectedMonth === currentEth.month.toString();
 

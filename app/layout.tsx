@@ -1,9 +1,10 @@
-import type { Metadata } from "next";
-import { Manrope, Playfair_Display, Poppins } from "next/font/google";
-import ServiceRegister from "@/components/service-register";
 import "./globals.css";
-import UpdateNotification from "@/components/update-notification";
+
+import type { Metadata } from "next";
 import { ThemeProvider } from "next-themes";
+import ServiceRegister from "@/components/service-register";
+import UpdateNotification from "@/components/update-notification";
+import { Manrope, Playfair_Display, Poppins } from "next/font/google";
 
 const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope" });
 const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-playfair" });
