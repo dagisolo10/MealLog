@@ -1,7 +1,7 @@
 "use client";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "./ui/button";
 import { IconBrightnessDownFilled, IconMoon } from "@tabler/icons-react";
 
 export function ThemeToggle() {

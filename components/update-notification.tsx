@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "./ui/button";
 import { RefreshCw, Sparkles } from "lucide-react";
 
 export default function UpdateNotification() {

@@ -1,12 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { Customer, db, MealSlot } from "@/lib/db";
 import DeleteAlertDialog from "./delete-alert-dialog";
 import { useLiveQuery } from "dexie-react-hooks";
 import { format, addDays, startOfDay } from "date-fns";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
 import { Check, Utensils, AlertCircle, Wallet, Phone } from "lucide-react";
 import { calculateMealStats } from "@/lib/meal-stats";
 import { cn } from "@/lib/utils";

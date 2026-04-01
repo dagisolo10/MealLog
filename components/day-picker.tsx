@@ -1,8 +1,8 @@
 "use client";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { DayPicker } from "react-day-picker/ethiopic";
-import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "./ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { toEC, monthNames } from "kenat";
 import "react-day-picker/style.css";
 import { useState } from "react";

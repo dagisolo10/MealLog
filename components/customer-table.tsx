@@ -1,9 +1,9 @@
 "use client";
 import { useMemo, useRef, useState } from "react";
-import { Table, TableBody, TableHeader, TableHead, TableRow, TableCell } from "@/components/ui/table";
+import { Table, TableBody, TableHeader, TableHead, TableRow, TableCell } from "./ui/table";
 import { Checkbox } from "./ui/checkbox";
 import { Input } from "./ui/input";
-import { Search, Minus, CalendarDays } from "lucide-react";
+import { Search, Minus, CalendarDays, Download } from "lucide-react";
 import { Customer, db } from "@/lib/db";
 import CustomerDetailsModal from "./customer-detail";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -14,6 +14,7 @@ import { getFullDate } from "@/lib/helper-functions";
 import { calculateMealStats } from "@/lib/meal-stats";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { exportFullHistory } from "@/lib/export";
 
 export default function CustomerTable({ customers }: { customers: Customer[] }) {
     const [query, setQuery] = useState("");
@@ -111,6 +112,10 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
                             </Button>
                         );
                     })}
+                    <Button onClick={() => exportFullHistory(customers, allLogs)} className="col-start-4 bg-blue-500 font-bold text-white">
+                        <Download />
+                        Export
+                    </Button>
                 </div>
             </div>
 

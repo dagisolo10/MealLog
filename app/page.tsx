@@ -1,11 +1,11 @@
 "use client";
-import CustomerTable from "@/components/customer-table";
+import CustomerTable from "../components/customer-table";
 import { getFullDate } from "@/lib/helper-functions";
 import { db } from "@/lib/db";
 import { useLiveQuery } from "dexie-react-hooks";
-import EmptyState from "@/components/empty-state";
-import CustomerModal from "@/components/customer-modal";
-import { ThemeToggle } from "@/components/theme-toggle";
+import EmptyState from "../components/empty-state";
+import CustomerModal from "../components/customer-modal";
+import { ThemeToggle } from "../components/theme-toggle";
 
 export default function Home() {
     const customers = useLiveQuery(() => db.customers.toArray()) || [];

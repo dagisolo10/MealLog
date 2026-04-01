@@ -1,9 +1,10 @@
 import "./globals.css";
 
+import UpdateNotification from "../components/update-notification";
+
 import type { Metadata } from "next";
 import { ThemeProvider } from "next-themes";
 import ServiceRegister from "@/components/service-register";
-import UpdateNotification from "@/components/update-notification";
 import { Manrope, Playfair_Display, Poppins } from "next/font/google";
 
 const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope" });
@@ -34,8 +35,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <html lang="en" suppressHydrationWarning>
             <body className={`${manrope.variable} ${poppins.variable} ${playfair.variable} antialiased`}>
                 <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-                    <ServiceRegister />
                     <main className="mx-auto max-w-11/12 py-12 pb-24">{children}</main>
+                    <ServiceRegister />
                     <UpdateNotification />
                 </ThemeProvider>
             </body>
