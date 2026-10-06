@@ -1,20 +1,20 @@
 "use client";
-import { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { Customer, db, MealSlot } from "@/lib/db";
-import DeleteAlertDialog from "./delete-alert-dialog";
-import { useLiveQuery } from "dexie-react-hooks";
-import { format, addDays, startOfDay } from "date-fns";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Check, Utensils, AlertCircle, Wallet, Phone } from "lucide-react";
+import { getFullDate } from "@/lib/helper-functions";
 import { calculateMealStats } from "@/lib/meal-stats";
 import { cn } from "@/lib/utils";
-import { getFullDate } from "@/lib/helper-functions";
+import { addDays, format, startOfDay } from "date-fns";
+import { useLiveQuery } from "dexie-react-hooks";
+import { AlertCircle, Check, Phone, Utensils, Wallet } from "lucide-react";
+import { useEffect, useState } from "react";
+import DeleteAlertDialog from "./delete-alert-dialog";
 import RenewContractDialog from "./renew-alert-dialog";
-import { Field } from "./ui/field";
-import { Label } from "./ui/label";
+import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
+import { Field } from "./ui/field";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 
 export default function CustomerDetailsModal({ customer, children }: { customer: Customer; children: React.ReactNode }) {
     const [open, setOpen] = useState(false);
@@ -31,7 +31,7 @@ export default function CustomerDetailsModal({ customer, children }: { customer:
         if (activeContract) setIsHalf(!!activeContract.half);
     }, [activeContract]);
 
-    const TOTAL_COST = activeContract?.half ? 2500 : 5000;
+    const TOTAL_COST = activeContract?.half ? 3000 : 6000;
     const allCustomerLogs = useLiveQuery(() => db.mealLogs.where("customerId").equals(customer.id!).toArray(), [customer.id]) || [];
 
     const stats = calculateMealStats(activeContract, allCustomerLogs);

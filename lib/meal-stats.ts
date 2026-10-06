@@ -1,12 +1,12 @@
 "use client";
-import { format, startOfDay, differenceInDays, addDays, isAfter, setHours } from "date-fns";
+import { addDays, differenceInDays, format, isAfter, setHours, startOfDay } from "date-fns";
 import { Contract, MealLog } from "./db";
 
 export function calculateMealStats(activeContract: Contract | undefined, allLogs: MealLog[]) {
     const isHalf = activeContract?.half ?? false;
     const MEALS_PER_DAY = isHalf ? 1 : 2;
     const TOTAL_MEALS_QUOTA = isHalf ? 30 : 60;
-    const TOTAL_COST = isHalf ? 2500 : 5000;
+    const TOTAL_COST = isHalf ? 3000 : 6000;
 
     if (!activeContract) {
         return {
