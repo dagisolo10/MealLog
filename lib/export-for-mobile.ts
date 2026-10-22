@@ -2,7 +2,7 @@ import { db, Customer, Contract, MealLog } from "@/lib/db";
 
 export interface MobileExportData {
     version: string;
-    mealLogs: Array<MealLog & { timestamp: string }>;
+    mealLogs: any[];
     settings: any[];
     saleItems: any[];
     customers: Customer[];
@@ -23,7 +23,7 @@ export async function exportForMobile(): Promise<MobileExportData> {
         contracts: contracts.map((contract) => ({ ...contract })),
         mealLogs: mealLogs.map((log) => ({
             ...log,
-            timestamp: log.timestamp instanceof Date ? log.timestamp.toISOString() : new Date(log.timestamp).toISOString(),
+            timestamp: log.timestamp instanceof Date ? log.timestamp.toISOString() : new Date(log.timestamp as any).toISOString(),
         })),
         settings: [],
         saleItems: [],
