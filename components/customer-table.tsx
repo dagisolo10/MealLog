@@ -1,6 +1,5 @@
 "use client";
 import { Customer, db } from "@/lib/db";
-import { exportForMobile } from "@/lib/export-for-mobile";
 import { getFullDate } from "@/lib/helper-functions";
 import { calculateMealStats } from "@/lib/meal-stats";
 import { cn } from "@/lib/utils";
@@ -15,6 +14,7 @@ import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
 import { Input } from "./ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import { downloadMobileExport } from "@/lib/export-for-mobile";
 
 export default function CustomerTable({ customers }: { customers: Customer[] }) {
     const [query, setQuery] = useState("");
@@ -112,7 +112,7 @@ export default function CustomerTable({ customers }: { customers: Customer[] }) 
                             </Button>
                         );
                     })}
-                    <Button onClick={async () => await exportForMobile()} className="col-start-4 bg-blue-500 font-bold text-white">
+                    <Button onClick={() => downloadMobileExport()} className="col-span-3 col-start-2 bg-blue-500 font-bold text-white">
                         <Download />
                         Export
                     </Button>
